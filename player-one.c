@@ -6,6 +6,12 @@
 
 #include "socket.h"
 
+void* player_two_connection(void* client_socket_fd) {
+
+
+  return NULL;
+}
+
 int main() {
 
   // Open a server socket
@@ -27,4 +33,25 @@ int main() {
 
   // Accept connection
 
+  // Wait for a client to connect
+  int client_socket_fd = server_socket_accept(server_socket_fd);
+  if (client_socket_fd == -1) {
+    perror("accept failed");
+    exit(EXIT_FAILURE);
+  }
+
+  printf("Client connected!\n");
+
+  pthread_t thread;
+
+  if (pthread_create(&thread, NULL, player_two_connection, (void*)&client_socket_fd) != 0) {
+    perror("pthread_create failed");
+    exit(EXIT_FAILURE);
+  }
+
+
+
+  
+
+  close(server_socket_fd);
 }
