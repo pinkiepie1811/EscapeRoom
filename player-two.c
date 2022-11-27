@@ -6,6 +6,16 @@
 
 #include "message.h"
 #include "socket.h"
+#include "ui.h"
+
+// This function is run whenever the user hits enter after typing a message
+void input_callback(const char* message) {
+  if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0) {
+    ui_exit();
+  } else {
+    ui_display("Player Two", message);
+  }
+}
 
 // Make two threads: one for sending messages and one for receiving messages
 // Thread for receiving messages from Player One
@@ -25,7 +35,8 @@ void* player_one_receive(void* receive_socket_fd) {
       }
 
       // Print the message otherwise
-      printf("Player One: %s", message);
+      // printf("Player One: %s", message);
+      ui_display("Player One", message);
   }
 
   return NULL;
@@ -76,21 +87,28 @@ int main(int argc, char** argv) {
   }
 
   // Create a separate thread to handle communication between players
-  pthread_t thread;
-  if (pthread_create(&thread, NULL, player_one_receive, (void*)&socket_fd) != 0) {
+  pthread_t receive_thread;
+  if (pthread_create(&receive_thread, NULL, player_one_receive, (void*)&socket_fd) != 0) {
     perror("pthread_create failed");
     exit(EXIT_FAILURE);
   }
 
   // Create a separate thread to handle communication between players
-  pthread_t thread2;
-  if (pthread_create(&thread2, NULL, player_one_send, (void*)&socket_fd) != 0) {
+  pthread_t send_thread;
+  if (pthread_create(&send_thread, NULL, player_one_send, (void*)&socket_fd) != 0) {
     perror("pthread_create failed");
     exit(EXIT_FAILURE);
   }
-  
-  while(1) {}
+
+  // Set up the user interface. The input_callback function will be called
+  // each time the user hits enter to send a message.
+  ui_init(input_callback);
+
+  // Run the UI loop. This function only returns once we call ui_stop() somewhere in the program.
+  ui_run();
 
   // Close socket EDIT
-  close(socket_fd);
+  // close(socket_fd);
+
+  return 0;
 }

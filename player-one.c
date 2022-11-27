@@ -6,6 +6,16 @@
 
 #include "message.h"
 #include "socket.h"
+#include "ui.h"
+
+// This function is run whenever the user hits enter after typing a message
+void input_callback(const char* message) {
+  if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0) {
+    ui_exit();
+  } else {
+    ui_display("Player One", message);
+  }
+}
 
 // Make two threads: one for sending messages and one for receiving messages
 // Thread for receiving messages from Player Two
@@ -25,8 +35,12 @@ void* player_two_receive(void* receive_socket_fd) {
       }
 
       // Print the message otherwise
-      printf("Player Two: %s", message);
+      // printf("Player Two: %s", message);
+
+      ui_display("Player Two", message);
   }
+
+  free(message);
 
   return NULL;
 } // player_two_receive
@@ -58,10 +72,38 @@ void* player_two_send(void* send_socket_fd) {
   free(input);
 
   // Close the socket
-  close(fd);
+  // close(fd);
 
   return NULL;
 } // player_two_send
+
+void* connect_players(void* server_socket_fd) {
+
+  int fd = *((int*)server_socket_fd);
+
+  // Wait for a client to connect
+  int socket_fd = server_socket_accept(fd);
+  if (socket_fd == -1) {
+    perror("accept failed");
+    exit(EXIT_FAILURE);
+  }
+
+  // Create a separate thread to handle communication between players
+  pthread_t receive_thread;
+  if (pthread_create(&receive_thread, NULL, player_two_receive, (void*)&socket_fd) != 0) {
+    perror("pthread_create failed");
+    exit(EXIT_FAILURE);
+  }
+
+  // Create a separate thread to handle communication between players
+  pthread_t send_thread;
+  if (pthread_create(&send_thread, NULL, player_two_send, (void*)&socket_fd) != 0) {
+    perror("pthread_create failed");
+    exit(EXIT_FAILURE);
+  }
+
+  return NULL;
+}
 
 int main() {
   // Open a server socket
@@ -78,35 +120,28 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
+  pthread_t accept_connection;
+  if (pthread_create(&accept_connection, NULL, connect_players, (void*)&server_socket_fd) != 0) {
+    perror("pthread_create failed");
+    exit(EXIT_FAILURE);
+  }
+
+  // Set up the user interface. The input_callback function will be called
+  // each time the user hits enter to send a message.
+  ui_init(input_callback);
+
   // Display title screen with port number on it
   // Replace the printf statement below with title screen
-  printf("Server listening on port %u\n", port);
+  // printf("Server listening on port %u\n", port);
+  char buffer[50];
+  sprintf(buffer, "Connect Player Two to port %u\n", port);
+  ui_display("INFO", buffer);
 
-  // Wait for a client to connect
-  int socket_fd = server_socket_accept(server_socket_fd);
-  if (socket_fd == -1) {
-    perror("accept failed");
-    exit(EXIT_FAILURE);
-  }
-
-  printf("Client connected!\n");
-
-  // Create a separate thread to handle communication between players
-  pthread_t receive_thread;
-  if (pthread_create(&receive_thread, NULL, player_two_receive, (void*)&socket_fd) != 0) {
-    perror("pthread_create failed");
-    exit(EXIT_FAILURE);
-  }
-
-  // Create a separate thread to handle communication between players
-  pthread_t send_thread;
-  if (pthread_create(&send_thread, NULL, player_two_send, (void*)&socket_fd) != 0) {
-    perror("pthread_create failed");
-    exit(EXIT_FAILURE);
-  }
-
-  while(1);
+  // Run the UI loop. This function only returns once we call ui_stop() somewhere in the program.
+  ui_run();
   
   // Close socket EDIT
-  close(server_socket_fd);
+  // close(server_socket_fd);
+
+  return 0;
 } // main
