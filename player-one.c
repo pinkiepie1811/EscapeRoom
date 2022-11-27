@@ -7,63 +7,61 @@
 #include "message.h"
 #include "socket.h"
 
-// I THINK WE NEED TWO THREADS, ONE TO RECEIVE AND ONE TO SEND
-// Thread for communication
-void* player_two_receive(void* client_socket_fd) {
-  int fd = *((int*)client_socket_fd);
+// Make two threads: one for sending messages and one for receiving messages
+// Thread for receiving messages from Player Two
+void* player_two_receive(void* receive_socket_fd) {
+  // File descriptor to receive messages
+  int fd = *((int*)receive_socket_fd);
+  // String to hold the received message
   char* message = malloc(MAX_MESSAGE_LENGTH);
+
+  // Continuously receive messages
   while(1) {
-      // Read a message from the client
+      // Read a message from Player Two
       message = receive_message(fd);
       if (message == NULL) {
         perror("Failed to read message from client");
         exit(EXIT_FAILURE);
       }
 
+      // Print the message otherwise
       printf("Player Two: %s", message);
   }
 
-  // Free the message string
-  free(message);
-
-  // Close sockets
-  close(fd);
-
   return NULL;
-}
+} // player_two_receive
 
-void* player_two_send(void* client_socket_fd) {
-  int fd = *((int*)client_socket_fd);
-  char * user_input = malloc(MAX_MESSAGE_LENGTH);
+// Thread for sending messages to Player Two
+void* player_two_send(void* send_socket_fd) {
+  // File descriptor to receive messages
+  int fd = *((int*)send_socket_fd);
+  // String to hold the message Player One wishes to send to Player Two
+  char * input = malloc(MAX_MESSAGE_LENGTH);
 
   // Get the line of input
-  fgets(user_input, MAX_MESSAGE_LENGTH, stdin);
+  fgets(input, MAX_MESSAGE_LENGTH, stdin);
 
-  while (user_input != NULL) {
-    // Send a message to the server
-    int rc = send_message(fd, user_input);
+  // Continuously send messages
+  while (input != NULL) {
+    // Send a message to Player Two
+    int rc = send_message(fd, input);
     if (rc == -1) {
       perror("Failed to send message to server");
       exit(EXIT_FAILURE);
     }
 
-    // Break if user types 'quit'
-    if(strcmp(user_input, "quit\n") == 0){
-        break;
-    }
-
     // Get the next line of input
-    fgets(user_input, MAX_MESSAGE_LENGTH, stdin);
+    fgets(input, MAX_MESSAGE_LENGTH, stdin);
   }
 
-  // Free user input
-  free(user_input);
+  // Free input string
+  free(input);
 
-  // Close socket
+  // Close the socket
   close(fd);
 
   return NULL;
-}
+} // player_two_send
 
 int main() {
   // Open a server socket
@@ -85,8 +83,8 @@ int main() {
   printf("Server listening on port %u\n", port);
 
   // Wait for a client to connect
-  int client_socket_fd = server_socket_accept(server_socket_fd);
-  if (client_socket_fd == -1) {
+  int socket_fd = server_socket_accept(server_socket_fd);
+  if (socket_fd == -1) {
     perror("accept failed");
     exit(EXIT_FAILURE);
   }
@@ -94,15 +92,15 @@ int main() {
   printf("Client connected!\n");
 
   // Create a separate thread to handle communication between players
-  pthread_t thread;
-  if (pthread_create(&thread, NULL, player_two_receive, (void*)&client_socket_fd) != 0) {
+  pthread_t receive_thread;
+  if (pthread_create(&receive_thread, NULL, player_two_receive, (void*)&socket_fd) != 0) {
     perror("pthread_create failed");
     exit(EXIT_FAILURE);
   }
 
   // Create a separate thread to handle communication between players
-  pthread_t thread2;
-  if (pthread_create(&thread2, NULL, player_two_send, (void*)&client_socket_fd) != 0) {
+  pthread_t send_thread;
+  if (pthread_create(&send_thread, NULL, player_two_send, (void*)&socket_fd) != 0) {
     perror("pthread_create failed");
     exit(EXIT_FAILURE);
   }
@@ -111,4 +109,4 @@ int main() {
   
   // Close socket EDIT
   close(server_socket_fd);
-}
+} // main

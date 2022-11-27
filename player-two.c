@@ -7,63 +7,55 @@
 #include "message.h"
 #include "socket.h"
 
-// Thread for communication 
-void* player_one_send(void* socket_fd) {
-  int fd = *((int*)socket_fd);
-  char * user_input = malloc(MAX_MESSAGE_LENGTH);
-
-  // Get the line of input
-  fgets(user_input, MAX_MESSAGE_LENGTH, stdin);
-
-  while (user_input != NULL) {
-    // Send a message to the server
-    int rc = send_message(fd, user_input);
-    if (rc == -1) {
-      perror("Failed to send message to server");
-      exit(EXIT_FAILURE);
-    }
-
-    // Break if user types 'quit'
-    if(strcmp(user_input, "quit\n") == 0){
-        break;
-    }
-
-    // Get the next line of input
-    fgets(user_input, MAX_MESSAGE_LENGTH, stdin);
-  }
-
-  // Free user input
-  free(user_input);
-
-  // Close socket
-  close(fd);
-
-  return NULL;
-
-}
-
-void* player_one_receive(void* client_socket_fd) {
-  int fd = *((int*)client_socket_fd);
+// Make two threads: one for sending messages and one for receiving messages
+// Thread for receiving messages from Player One
+void* player_one_receive(void* receive_socket_fd) {
+  // File descriptor to receive messages
+  int fd = *((int*)receive_socket_fd);
+  // String to hold the received message
   char* message = malloc(MAX_MESSAGE_LENGTH);
+
+  // Continuously receive messages
   while(1) {
-      // Read a message from the client
+      // Read a message from Player One
       message = receive_message(fd);
       if (message == NULL) {
         perror("Failed to read message from client");
         exit(EXIT_FAILURE);
       }
 
+      // Print the message otherwise
       printf("Player One: %s", message);
   }
 
-  // Free the message string
-  free(message);
+  return NULL;
+} // player_one_receive
 
-  // Close sockets
-  close(fd);
+// Thread for sending messages to Player One
+void* player_one_send(void* send_socket_fd) {
+  // File descriptor to receive messages
+  int fd = *((int*)send_socket_fd);
+  // String to hold the message Player Two wishes to send to Player One
+  char * input = malloc(MAX_MESSAGE_LENGTH);
+
+  // Get the line of input
+  fgets(input, MAX_MESSAGE_LENGTH, stdin);
+
+  // Continuously send messages
+  while (input != NULL) {
+    // Send a message to Player One
+    int rc = send_message(fd, input);
+    if (rc == -1) {
+      perror("Failed to send message to server");
+      exit(EXIT_FAILURE);
+    }
+
+    // Get the next line of input
+    fgets(input, MAX_MESSAGE_LENGTH, stdin);
+  }
 
   return NULL;
-}
+} // player_one_send
 
 int main(int argc, char** argv) {
   // Check user input
