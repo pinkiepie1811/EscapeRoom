@@ -67,11 +67,11 @@ void ui_init(input_callback_t callback) {
 
   // Create the larger message display window
   // height, width, start row, start col, overflow buffer lines, buffers
-  display_fields[0] = new_field(display_height, cols, 0, 0, 0, 0);
+  display_fields[0] = new_field(display_height, cols / 2, 0, cols / 2, 0, 0);
   display_fields[1] = NULL;
 
   // Create the input field
-  input_fields[0] = new_field(INPUT_HEIGHT, cols, display_height + 1, 0, 0, 0);
+  input_fields[0] = new_field(INPUT_HEIGHT, cols / 2, display_height + 1, cols / 2, 0, 0);
   input_fields[1] = NULL;
 
   // Grow the display field buffer as needed
@@ -94,8 +94,13 @@ void ui_init(input_callback_t callback) {
   refresh();
 
   // Draw a horizontal split
-  for (int i = 0; i < cols; i++) {
+  for (int i = cols / 2; i < cols; i++) {
     mvprintw(display_height, i, "-");
+  }
+
+  // Draw a vertical split
+  for (int j = 0; j < rows; j++) {
+    mvprintw(j, (cols / 2) - 1, "|");
   }
 
   // Update the display
@@ -125,6 +130,11 @@ void ui_run() {
     // If there was no character, try again
     if (ch == -1) continue;
 
+
+    /*
+     * TO DO: check if the input is for the game or the chat
+     * ALSO CHECK WORM LAB
+     */
     // There was some character. Lock the UI
     pthread_mutex_lock(&ui_lock);
 

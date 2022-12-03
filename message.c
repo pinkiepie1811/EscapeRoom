@@ -16,7 +16,7 @@ int send_message(int fd, char* message) {
   }
 
   // First, send the length of the message in a size_t
-  size_t len = strlen(message);
+  size_t len = strlen(message) + 1;
   if (write(fd, &len, sizeof(size_t)) != sizeof(size_t)) {
     // Writing failed, so return an error
     return -1;
