@@ -36,6 +36,8 @@ void ui_run();
  */
 void ui_display(const char* username, const char* message);
 
+void ui_maze(int player);
+
 /**
  * Stop the user interface and clean up.
  */

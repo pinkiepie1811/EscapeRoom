@@ -1,10 +1,12 @@
 #include "ui.h"
+#include "mazegame.h"
 
 #include <form.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+
 
 // The height of the input field in the user interface
 #define INPUT_HEIGHT 3
@@ -20,6 +22,12 @@ FIELD* display_fields[2];
 
 // The form that holds the display field
 FORM* display_form;
+
+// The fields array for the display form
+FIELD* game_fields[2];
+
+// The form that holds the display field
+FORM* game_form;
 
 // The fields array for the input form
 FIELD* input_fields[2];
@@ -65,6 +73,11 @@ void ui_init(input_callback_t callback) {
   // Calculate the height of the display field
   int display_height = rows - INPUT_HEIGHT - 1;
 
+  // Create the game window
+  // height, width, start row, start col, overflow buffer lines, buffers
+  game_fields[0] = new_field(display_height, cols / 2 -1, 0, 0, 0, 0);
+  game_fields[1] = NULL;
+
   // Create the larger message display window
   // height, width, start row, start col, overflow buffer lines, buffers
   display_fields[0] = new_field(display_height, cols / 2, 0, cols / 2, 0, 0);
@@ -83,12 +96,15 @@ void ui_init(input_callback_t callback) {
   // Turn off word wrap (nice, but causes other problems)
   field_opts_off(input_fields[0], O_WRAP);
   field_opts_off(display_fields[0], O_WRAP);
+  field_opts_off(game_fields[0], O_WRAP);
 
   // Create the forms
+  game_form = new_form(game_fields);
   display_form = new_form(display_fields);
   input_form = new_form(input_fields);
 
   // Display the forms
+  post_form(game_form);
   post_form(display_form);
   post_form(input_form);
   refresh();
@@ -229,6 +245,26 @@ void ui_display(const char* username, const char* message) {
   pthread_mutex_unlock(&ui_lock);
 }
 
+
+void ui_maze(int player) {
+  char** maze = readMaze();
+  if (player == 2) {
+  // Lock the UI
+  pthread_mutex_lock(&ui_lock);
+  if (ui_running) {
+    for (int y = 0; y < SIZE; y++){
+        for (int x = 0; x < SIZE; x++){
+            form_driver(game_form, maze[y][x]);
+        }
+        form_driver(game_form, REQ_NEW_LINE);
+    }
+  }
+  }
+  // Unlock the UI
+  pthread_mutex_unlock(&ui_lock);
+
+}
+
 /**
  * Stop the user interface and clean up.
  */
@@ -242,8 +278,11 @@ void ui_exit() {
   // Clean up
   unpost_form(display_form);
   unpost_form(input_form);
+  unpost_form(game_form);
+  free_form(game_form);
   free_form(display_form);
   free_form(input_form);
+  free_field(game_fields[0]);
   free_field(display_fields[0]);
   free_field(input_fields[0]);
   endwin();

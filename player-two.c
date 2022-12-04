@@ -16,6 +16,9 @@ void input_callback(const char* message) {
     ui_exit();
   }
   else { 
+    if (strcmp(message, ":maze") == 0 || strcmp(message, ":m") == 0) {
+      ui_maze(2);
+    }
     ui_display("Player Two", message); 
   }
   if (send_message(fd, (char*)message) == -1) {
