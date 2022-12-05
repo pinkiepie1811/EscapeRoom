@@ -15,6 +15,9 @@ void input_callback(const char* message) {
   if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0) {
     ui_exit();
   }
+  else if (strcmp(message, ":maze") == 0 || strcmp(message, ":m") == 0) {
+    ui_maze(1);
+  }
   else { 
     ui_display("Player One", message); 
   }

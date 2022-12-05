@@ -15,15 +15,15 @@ void input_callback(const char* message) {
   if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0) {
     ui_exit();
   }
-  else { 
-    if (strcmp(message, ":maze") == 0 || strcmp(message, ":m") == 0) {
-      ui_maze(2);
-    }
-    ui_display("Player Two", message); 
+  else if (strcmp(message, ":maze") == 0 || strcmp(message, ":m") == 0) {
+    ui_maze(2);
   }
-  if (send_message(fd, (char*)message) == -1) {
-    perror("send_message to Player One has failed");
-    exit(EXIT_FAILURE);
+  else { 
+    ui_display("Player Two", message); 
+    if (send_message(fd, (char*)message) == -1) {
+      perror("send_message to Player One has failed");
+      exit(EXIT_FAILURE);
+    }
   }
 }
 
@@ -49,7 +49,7 @@ void* player_one_receive(void* args) {
       // Print the message otherwise
       ui_display("Player One", message);
   }
-
+  free(message);
   return NULL;
 } // player_one_receive
 

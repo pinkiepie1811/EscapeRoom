@@ -248,17 +248,41 @@ void ui_display(const char* username, const char* message) {
 
 void ui_maze(int player) {
   char** maze = readMaze();
-  if (player == 2) {
   // Lock the UI
   pthread_mutex_lock(&ui_lock);
-  if (ui_running) {
-    for (int y = 0; y < SIZE; y++){
-        for (int x = 0; x < SIZE; x++){
-            form_driver(game_form, maze[y][x]);
-        }
-        form_driver(game_form, REQ_NEW_LINE);
+  if (player == 2) {
+    if (ui_running) {
+      for (int y = 0; y < SIZE; y++){
+          for (int x = 0; x < SIZE; x++){
+              form_driver(game_form, maze[y][x]);
+          }
+          form_driver(game_form, REQ_NEW_LINE);
+      }
     }
   }
+  else if (player == 1) {
+    if (ui_running) {
+      for (int y = 0; y < SIZE; y++){
+        for (int x = 0; x < SIZE; x++){
+          /*if ((y > 0 && y < SIZE - 1) && (x > 0 && x < SIZE - 1)) {
+            form_driver(game_form, maze[y][x]);
+          } else {
+            form_driver(game_form, ' ');
+          }*/
+         if (y == 0 || y == SIZE -1){
+           form_driver(game_form, maze[y][x]);
+          }
+         else {
+           if (x == 0 || x == SIZE -1){
+             form_driver(game_form, maze[y][x]);
+           }
+           else 
+              form_driver(game_form, ' ');
+          }
+        }
+        form_driver(game_form, REQ_NEW_LINE);
+      }
+    }
   }
   // Unlock the UI
   pthread_mutex_unlock(&ui_lock);
