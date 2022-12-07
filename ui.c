@@ -47,6 +47,9 @@ static input_callback_t input_callback;
 
 // When true, the UI should continue running
 bool ui_running = false;
+bool maze_running = false;
+int maze_x = 3;
+int maze_y = 0;
 
 /**
  * Initialize the user interface and set up a callback function that should be
@@ -159,6 +162,26 @@ void ui_run() {
       // Delete the last character when the user presses backspace
       form_driver(input_form, REQ_DEL_PREV);
 
+    } else if ((ch == KEY_DOWN || ch == KEY_UP || ch == KEY_RIGHT || ch == KEY_LEFT) && maze_running) {
+      if (ch == KEY_RIGHT) {
+        maze_x++;
+      } else if (ch == KEY_LEFT) {
+        maze_x--;
+      } else if (ch == KEY_DOWN) {
+        maze_y++;
+      } else if (ch == KEY_UP) {
+        maze_y--;
+      }
+      if (maze_x>=0 && maze_x < SIZE && maze_y >= 0 && maze_y < SIZE) {
+        if (ui_running) form_driver(game_form, REQ_CLR_FIELD);
+        ui_maze(1);
+      }
+      else {
+        maze_x=3;
+        maze_y=0;
+      }
+      
+
     } else if (ch == KEY_ENTER || ch == '\n') {
       // When the user presses enter, report new input
 
@@ -247,6 +270,8 @@ void ui_display(const char* username, const char* message) {
 
 
 void ui_maze(int player) {
+  maze_running = true;
+  if (ui_running) {
   char** maze = readMaze();
   // Lock the UI
   pthread_mutex_lock(&ui_lock);
@@ -262,28 +287,31 @@ void ui_maze(int player) {
   }
   else if (player == 1) {
     if (ui_running) {
+      if (maze[maze_y][maze_x] == '#') {
+        maze_x = 3;
+        maze_y = 0;
+      }
       for (int y = 0; y < SIZE; y++){
         for (int x = 0; x < SIZE; x++){
-          /*if ((y > 0 && y < SIZE - 1) && (x > 0 && x < SIZE - 1)) {
-            form_driver(game_form, maze[y][x]);
-          } else {
-            form_driver(game_form, ' ');
-          }*/
-         if (y == 0 || y == SIZE -1){
+         if (y == maze_y && x == maze_x) {
+          form_driver(game_form, '@');
+          }
+         
+         else if (y == 0 || y == SIZE -1){
            form_driver(game_form, maze[y][x]);
           }
-         else {
-           if (x == 0 || x == SIZE -1){
-             form_driver(game_form, maze[y][x]);
-           }
-           else 
-              form_driver(game_form, ' ');
+         else if (x == 0 || x == SIZE -1){
+            form_driver(game_form, maze[y][x]);
+          }
+          else {
+            form_driver(game_form, ' ');
           }
         }
         form_driver(game_form, REQ_NEW_LINE);
       }
     }
   }
+}
   // Unlock the UI
   pthread_mutex_unlock(&ui_lock);
 

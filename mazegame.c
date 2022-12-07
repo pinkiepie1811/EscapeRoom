@@ -13,10 +13,9 @@ char** readMaze(){
     for (int i = 0; i < SIZE; i++){
         game_maze[i] = (char*)malloc(SIZE);
     }
-    printf("test");
     FILE * mazefile = fopen("maze.txt", "r");
     if (mazefile == NULL) {
-        printf("died");
+        printf("Failed to read maze");
     }
 
     char cell;
