@@ -8,7 +8,7 @@
 #include "socket.h"
 #include "ui.h"
 
-int fd; 
+int fd = -1; 
 
 // This function is run whenever the user hits enter after typing a message
 void input_callback(const char* message) {
@@ -20,12 +20,15 @@ void input_callback(const char* message) {
   }
   else { 
     ui_display("Player Two", message); 
+  }
+  if (fd != -1) {
     if (send_message(fd, (char*)message) == -1) {
       perror("send_message to Player One has failed");
       exit(EXIT_FAILURE);
     }
   }
 }
+
 
 // Make two threads: one for sending messages and one for receiving messages
 // Thread for receiving messages from Player One
@@ -42,13 +45,15 @@ void* player_one_receive(void* args) {
         exit(EXIT_FAILURE);
       }
       if ((strcmp(message, ":q") == 0) || (strcmp(message, ":quit") == 0)) {
-        ui_display("WARNING", "Player One has quit");
+        ui_display("WARNING", "PLAYER 2 HAS QUIT");
         break;
       }
 
       // Print the message otherwise
       ui_display("Player One", message);
   }
+
+  fd = -1;
   free(message);
   return NULL;
 } // player_one_receive

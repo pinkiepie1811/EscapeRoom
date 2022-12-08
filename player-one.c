@@ -44,16 +44,15 @@ void* player_two_receive(void* arg) {
         exit(EXIT_FAILURE);
       }
       if ((strcmp(message, ":q") == 0) || (strcmp(message, ":quit") == 0)) {
-        ui_display("WARNING", "Player Two has quit");
+        ui_display("WARNING", "PLAYER 2 HAS QUIT");
         break;
       }
 
       // Print the message otherwise
       ui_display("Player Two", message);
   }
-
+  fd = -1;
   free(message);
-
   return NULL;
 } // player_two_receive
 

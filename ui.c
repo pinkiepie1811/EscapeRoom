@@ -285,6 +285,7 @@ void ui_maze(int player) {
       }
     }
   }
+  
   else if (player == 1) {
     if (ui_running) {
       if (maze[maze_y][maze_x] == '#') {
