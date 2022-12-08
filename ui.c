@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 
 // The height of the input field in the user interface
@@ -23,11 +24,17 @@ FIELD* display_fields[2];
 // The form that holds the display field
 FORM* display_form;
 
-// The fields array for the display form
+// The fields array for the game form
 FIELD* game_fields[2];
 
-// The form that holds the display field
+// The form that holds the game field
 FORM* game_form;
+
+// The fields array for the narrative form
+FIELD* narrative_fields[2];
+
+// The form that holds the narrative field
+FORM* narrative_form;
 
 // The fields array for the input form
 FIELD* input_fields[2];
@@ -69,8 +76,9 @@ void ui_init(input_callback_t callback) {
   keypad(stdscr, TRUE);
 
   // Get the number of rows and columns in the terminal display
-  int rows;
-  int cols;
+  int rows = 0;
+  int cols = 0;
+
   getmaxyx(stdscr, rows, cols);  // This uses a macro to modify rows and cols
 
   // Calculate the height of the display field
@@ -78,8 +86,13 @@ void ui_init(input_callback_t callback) {
 
   // Create the game window
   // height, width, start row, start col, overflow buffer lines, buffers
-  game_fields[0] = new_field(display_height, cols / 2 -1, 0, 0, 0, 0);
+  game_fields[0] = new_field(display_height / 2 - 1, cols / 2 -1, 0, 0, 0, 0);
   game_fields[1] = NULL;
+
+  // Create the narrative window
+  // height, width, start row, start col, overflow buffer lines, buffers
+  narrative_fields[0] = new_field(display_height / 2 - 1, cols / 2 -1, display_height / 2 + 1, 0, 0, 0);
+  narrative_fields[1] = NULL;
 
   // Create the larger message display window
   // height, width, start row, start col, overflow buffer lines, buffers
@@ -90,8 +103,9 @@ void ui_init(input_callback_t callback) {
   input_fields[0] = new_field(INPUT_HEIGHT, cols / 2, display_height + 1, cols / 2, 0, 0);
   input_fields[1] = NULL;
 
-  // Grow the display field buffer as needed
+  // Grow the display & narrative field buffers as needed
   field_opts_off(display_fields[0], O_STATIC);
+  field_opts_off(narrative_fields[0], O_STATIC);
 
   // Don't advance to the next field automatically when using the input field
   field_opts_off(input_fields[0], O_AUTOSKIP);
@@ -100,16 +114,19 @@ void ui_init(input_callback_t callback) {
   field_opts_off(input_fields[0], O_WRAP);
   field_opts_off(display_fields[0], O_WRAP);
   field_opts_off(game_fields[0], O_WRAP);
+  field_opts_off(narrative_fields[0], O_WRAP);
 
   // Create the forms
   game_form = new_form(game_fields);
   display_form = new_form(display_fields);
   input_form = new_form(input_fields);
+  narrative_form = new_form(narrative_fields);
 
   // Display the forms
   post_form(game_form);
   post_form(display_form);
   post_form(input_form);
+  post_form(narrative_form);
   refresh();
 
   // Draw a horizontal split
@@ -242,22 +259,29 @@ void ui_display(const char* username, const char* message) {
 
   // Don't do anything if the UI is not running
   if (ui_running) {
+    FORM* used_form;
+    if (strcmp(username,"Narrator") == 0) {
+      used_form = narrative_form;
+    }
+    else{
+      used_form = display_form;
+    }
     // Add a newline
-    form_driver(display_form, REQ_NEW_LINE);
+    form_driver(used_form, REQ_NEW_LINE);
 
     // Display the username
     const char* c = username;
     while (*c != '\0') {
-      form_driver(display_form, *c);
+      form_driver(used_form, *c);
       c++;
     }
-    form_driver(display_form, ':');
-    form_driver(display_form, ' ');
+    form_driver(used_form, ':');
+    form_driver(used_form, ' ');
 
     // Copy the message over to the display field
     c = message;
     while (*c != '\0') {
-      form_driver(display_form, *c);
+      form_driver(used_form, *c);
       c++;
     }
   } else {
@@ -312,6 +336,7 @@ void ui_maze(int player) {
       }
     }
   }
+
 }
   // Unlock the UI
   pthread_mutex_unlock(&ui_lock);
@@ -332,12 +357,15 @@ void ui_exit() {
   unpost_form(display_form);
   unpost_form(input_form);
   unpost_form(game_form);
+  unpost_form(narrative_form);
   free_form(game_form);
   free_form(display_form);
   free_form(input_form);
+  free_form(narrative_form);
   free_field(game_fields[0]);
   free_field(display_fields[0]);
   free_field(input_fields[0]);
+  free_field(narrative_fields[0]);
   endwin();
 
   // Unlock the UI

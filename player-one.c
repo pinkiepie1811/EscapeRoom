@@ -56,6 +56,11 @@ void* player_two_receive(void* arg) {
   return NULL;
 } // player_two_receive
 
+void* narrate(void* args) {
+  ui_display("Narrator","You wake up. Taking a look around, you see you are trapped in a stone chamber. You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall. Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond. You need to escape before it is too late!");
+return NULL;
+}
+
 void* connect_players(void* server_socket_fd) {
 
   int server_fd = *((int*)server_socket_fd);
@@ -71,6 +76,12 @@ void* connect_players(void* server_socket_fd) {
   // Create a separate thread to handle communication between players
   pthread_t receive_thread;
   if (pthread_create(&receive_thread, NULL, player_two_receive, NULL) != 0) {
+    perror("pthread_create failed");
+    exit(EXIT_FAILURE);
+  }
+
+  pthread_t narrative;
+  if (pthread_create(&narrative, NULL, narrate, NULL) != 0) {
     perror("pthread_create failed");
     exit(EXIT_FAILURE);
   }
