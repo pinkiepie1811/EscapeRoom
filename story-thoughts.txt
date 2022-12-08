@@ -1,0 +1,25 @@
+Have talking in lower half of game form screen maybe. we could seperate that form into two windows.
+
+Both:
+You wake up. Taking a look around, you see you are trapped in a stone chamber. You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall. Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond. You need to escape before it is too late!
+
+Your phone starts to buzz in your pocket, but when you check it out, it has no signal. Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor? You try typing something in.
+
+(make sure p1 and p2 both send each other a message.)
+
+What's this? It seems someone else is on the other end of this line- maybe they are stuck too. Perhaps you can use this strange app to communicate, and maybe even help each other escape!
+
+
+Player 1:
+(wait idk like 10 sec. or if we feeling fancy when p2 flips a switch. start the (10 min?) timer at this point)
+
+As you consider your situation, the cracks in the wall in front of you start to glow brighter, before they abruptly split apart into a pathway. You poke your head in, and realize you there looks to be a set of tunnels ahead. However, the glow in the walls is limited to your room- if you step in you will be walking in the dark. Still, you have little other choice.
+
+ENTER THE MAZE.
+
+
+Player 2:
+Other than the cracks, the room you are in is empty, save for a strange lever almost directly in front of where you woke up. Pull the lever? (use ":y" or ":n" as input)
+
+You pull the lever. The cracks on the wall shine brighter for a moment, only to shift- moving to form.... what looks like a map of a maze? Curious. Maybe this will be relevant to your new friend.
+(Display maze)
