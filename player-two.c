@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <stdbool.h>s
+#include <stdbool.h>
 
 #include "message.h"
 #include "socket.h"
@@ -69,6 +69,18 @@ void* narrate(void* args) {
   Even as you look, these cracks grow wider: the room is vibrating, and every so often, \
   the sound of earth collapsing and rocks crashing into themselves echoes from beyond. \
   You need to escape before it is too late!");
+  sleep(5);
+  ui_display("Narrator","Your phone starts to buzz in your pocket, but when you check it out, it has no signal.\
+  Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor? \
+  You try typing something in. What's this? \
+  It seems someone else is on the other end of this line- maybe they are stuck too.\
+  Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
+  while(1){
+    if (received_message && sent_message){
+      break;
+    }
+  }
+  ui_display("Narrator", "Other than the cracks, the room you are in is empty, save for a strange lever almost directly in front of where you woke up. Pull the lever?");
   return NULL;
 }
 

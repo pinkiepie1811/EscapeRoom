@@ -312,9 +312,13 @@ void ui_maze(int player) {
   
   else if (player == 1) {
     if (ui_running) {
-      if (maze[maze_y][maze_x] == '#') {
+      if (maze[maze_y][maze_x] == '*') {
         maze_x = 3;
         maze_y = 0;
+      }
+      else if (maze[maze_y][maze_x] == 'E') {
+        maze_running = false;
+        return;
       }
       for (int y = 0; y < SIZE; y++){
         for (int x = 0; x < SIZE; x++){

@@ -3,7 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <stdbool.h>s
+#include <stdbool.h>
 
 #include "message.h"
 #include "socket.h"
@@ -62,18 +62,18 @@ void* player_two_receive(void* arg) {
 } // player_two_receive
 
 void* narrate(void* args) {
-  ui_display("Narrator","You wake up. Taking a look around, you see you are trapped in a stone chamber. \
-  You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.  \
-  Even as you look, these cracks grow wider: the room is vibrating, and every so often, \
-  the sound of earth collapsing and rocks crashing into themselves echoes from beyond. \
-  You need to escape before it is too late!");
+  ui_display("Narrator","You wake up.");
+  sleep(1);
+  ui_display("Narrator","Taking a look around, you see you are trapped in a stone chamber.");
+  sleep(1);
+  ui_display("Narrator","You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.");
+  sleep(1);
+  ui_display("Narrator","Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond.");
+  sleep(1);
+  ui_display("Narrator","You need to escape before it is too late!");
   sleep(5);
-  ui_display("Narrator","You wake up. Taking a look around, you see you are trapped in a stone chamber.\
-  You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.\
-  Even as you look, these cracks grow wider: the room is vibrating, and every so often,\
-  the sound of earth collapsing and rocks crashing into themselves echoes from beyond. You need to escape before it is too late!\
-  Your phone starts to buzz in your pocket, but when you check it out, it has no signal.\
-  Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor? \
+  ui_display("Narrator","Your phone starts to buzz in your pocket, but when you check it out, it has no signal.");
+  ui_display("Narrator","Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor? \
   You try typing something in. What's this? \
   It seems someone else is on the other end of this line- maybe they are stuck too.\
   Perhaps you can use this strange app to communicate, and maybe even help each other escape!");

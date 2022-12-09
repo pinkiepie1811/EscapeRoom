@@ -1,3 +1,5 @@
+
+
 CC := clang
 CFLAGS := -g 
 
@@ -11,3 +13,7 @@ player-one: player-one.c message.h message.c socket.h ui.c ui.h mazegame.h
 
 player-two: player-two.c message.h message.c socket.h ui.c ui.h mazegame.h
 	$(CC) $(CFLAGS) -o player-two player-two.c message.c ui.c mazegame.c -lform -lncurses -lpthread
+
+
+
+
