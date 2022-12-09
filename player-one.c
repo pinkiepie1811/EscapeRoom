@@ -3,12 +3,15 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <stdbool.h>s
 
 #include "message.h"
 #include "socket.h"
 #include "ui.h"
 
 int fd = -1;
+bool received_message = false;
+bool sent_message = false;
 
 // This function is run whenever the user hits enter after typing a message
 void input_callback(const char* message) {
@@ -27,6 +30,7 @@ void input_callback(const char* message) {
       exit(EXIT_FAILURE);
     }
   }
+  sent_message = true;
 }
 
 // Make two threads: one for sending messages and one for receiving messages
@@ -48,6 +52,7 @@ void* player_two_receive(void* arg) {
         break;
       }
 
+      received_message = true;
       // Print the message otherwise
       ui_display("Player Two", message);
   }
@@ -57,7 +62,29 @@ void* player_two_receive(void* arg) {
 } // player_two_receive
 
 void* narrate(void* args) {
-  ui_display("Narrator","You wake up. Taking a look around, you see you are trapped in a stone chamber. You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall. Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond. You need to escape before it is too late!");
+  ui_display("Narrator","You wake up. Taking a look around, you see you are trapped in a stone chamber. \
+  You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.  \
+  Even as you look, these cracks grow wider: the room is vibrating, and every so often, \
+  the sound of earth collapsing and rocks crashing into themselves echoes from beyond. \
+  You need to escape before it is too late!");
+  sleep(5);
+  ui_display("Narrator","You wake up. Taking a look around, you see you are trapped in a stone chamber.\
+  You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.\
+  Even as you look, these cracks grow wider: the room is vibrating, and every so often,\
+  the sound of earth collapsing and rocks crashing into themselves echoes from beyond. You need to escape before it is too late!\
+  Your phone starts to buzz in your pocket, but when you check it out, it has no signal.\
+  Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor? \
+  You try typing something in. What's this? \
+  It seems someone else is on the other end of this line- maybe they are stuck too.\
+  Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
+  while(1){
+    if (received_message && sent_message){
+      break;
+    }
+  }
+  ui_display("Narrator", "As you consider your situation, the cracks in the wall in front of you start to glow brighter, before they abruptly split apart into a pathway.\
+   You poke your head in, and realize you there looks to be a set of tunnels ahead.\
+   However, the glow in the walls is limited to your room- if you step in you will be walking in the dark. Still, you have little other choice.");
 return NULL;
 }
 

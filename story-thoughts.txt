@@ -1,13 +1,6 @@
-Have talking in lower half of game form screen maybe. we could seperate that form into two windows.
+
 
 Both:
-You wake up. Taking a look around, you see you are trapped in a stone chamber. You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall. Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond. You need to escape before it is too late!
-
-Your phone starts to buzz in your pocket, but when you check it out, it has no signal. Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor? You try typing something in.
-
-(make sure p1 and p2 both send each other a message.)
-
-What's this? It seems someone else is on the other end of this line- maybe they are stuck too. Perhaps you can use this strange app to communicate, and maybe even help each other escape!
 
 
 Player 1:

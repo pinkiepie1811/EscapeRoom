@@ -3,12 +3,16 @@
 #include <string.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <stdbool.h>s
 
 #include "message.h"
 #include "socket.h"
 #include "ui.h"
 
-int fd = -1; 
+int fd = -1;
+bool received_message = false;
+bool sent_message = false;
+
 
 // This function is run whenever the user hits enter after typing a message
 void input_callback(const char* message) {
@@ -26,6 +30,7 @@ void input_callback(const char* message) {
       perror("send_message to Player One has failed");
       exit(EXIT_FAILURE);
     }
+    sent_message = true;
   }
 }
 
@@ -48,7 +53,7 @@ void* player_one_receive(void* args) {
         ui_display("WARNING", "PLAYER 2 HAS QUIT");
         break;
       }
-
+      received_message = true;
       // Print the message otherwise
       ui_display("Player One", message);
   }
@@ -57,6 +62,15 @@ void* player_one_receive(void* args) {
   free(message);
   return NULL;
 } // player_one_receive
+
+void* narrate(void* args) {
+  ui_display("Narrator","You wake up. Taking a look around, you see you are trapped in a stone chamber. \
+  You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.  \
+  Even as you look, these cracks grow wider: the room is vibrating, and every so often, \
+  the sound of earth collapsing and rocks crashing into themselves echoes from beyond. \
+  You need to escape before it is too late!");
+  return NULL;
+}
 
 int main(int argc, char** argv) {
   // Check user input
@@ -83,9 +97,17 @@ int main(int argc, char** argv) {
     exit(EXIT_FAILURE);
   }
 
+
   // Set up the user interface. The input_callback function will be called
   // each time the user hits enter to send a message.
   ui_init(input_callback);
+
+
+  pthread_t narrative;
+  if (pthread_create(&narrative, NULL, narrate, NULL) != 0) {
+    perror("pthread_create failed");
+    exit(EXIT_FAILURE);
+  }
 
   // Run the UI loop. This function only returns once we call ui_stop() somewhere in the program.
   ui_run();
