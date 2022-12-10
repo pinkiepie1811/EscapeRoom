@@ -1,3 +1,4 @@
+// Copied from Networking Exercise
 #pragma once
 
 #include <errno.h>
@@ -47,7 +48,7 @@ static int socket_connect(char* server_name, unsigned short port) {
   }
 
   return fd;
-}
+} // socket_connect
 
 /**
  * Open a server socket that will accept TCP connections from any other machine.
@@ -95,7 +96,7 @@ static int server_socket_open(unsigned short* port) {
 
   // Return the server socket file descriptor
   return fd;
-}
+} // server_socket_open
 
 /**
  * Accept an incoming connection on a server socket.
@@ -119,4 +120,4 @@ static int server_socket_accept(int server_socket_fd) {
   }
 
   return client_socket_fd;
-}
+} // server_socket_accept

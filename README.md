@@ -9,3 +9,5 @@ that was at first almost exclusively only accessible in person, attainable for a
 be creating a virtual escape room. 
 
 ## Implementation/Program Description [will be added later]
+
+## maze.txt is the text file that contains our maze. We read in the file to generate the maze in the game. 

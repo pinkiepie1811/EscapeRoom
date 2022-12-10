@@ -1,6 +1,8 @@
 #if !defined(UI_H)
 #define UI_H
 
+#include <stdbool.h>
+
 /**
  * The type of a callback function run by the user interface every time there is
  * a new message provided in the input pane. The parameter points to memory that
@@ -8,6 +10,15 @@
  * string after the callback you must copy it.
  */
 typedef void (*input_callback_t)(const char*);
+
+
+/**
+ * @brief Checks if the maze is currently being explored
+ * 
+ * @return true 
+ * @return false 
+ */
+bool maze_running_check();
 
 /**
  * Initialize the user interface and set up a callback function that should be

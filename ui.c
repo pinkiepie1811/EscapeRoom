@@ -3,7 +3,6 @@
 
 #include <form.h>
 #include <pthread.h>
-#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -57,6 +56,33 @@ bool ui_running = false;
 bool maze_running = false;
 int maze_x = 3;
 int maze_y = 0;
+
+int stored_player = -1;
+
+pthread_mutex_t maze_lock = PTHREAD_MUTEX_INITIALIZER;
+
+// Error Protection for locking
+void Pthread_mutex_lock(pthread_mutex_t* mutex) {
+  if (pthread_mutex_lock(mutex) != 0) {
+    perror("pthread_mutex_lock failed");
+    exit(EXIT_FAILURE);
+  }
+} // Pthread_mutex_lock
+
+// Error Protection for unlocking
+void Pthread_mutex_unlock(pthread_mutex_t* mutex) {
+  if (pthread_mutex_unlock(mutex) != 0) {
+    perror("pthread_mutex_unlock failed");
+    exit(EXIT_FAILURE);
+  }
+} // Pthread_mutex_unlock
+
+bool maze_running_check() {
+  Pthread_mutex_lock(&maze_lock);
+  bool maze = maze_running;
+  Pthread_mutex_unlock(&maze_lock);
+  return maze;
+}
 
 /**
  * Initialize the user interface and set up a callback function that should be
@@ -114,7 +140,7 @@ void ui_init(input_callback_t callback) {
   field_opts_off(input_fields[0], O_WRAP);
   field_opts_off(display_fields[0], O_WRAP);
   field_opts_off(game_fields[0], O_WRAP);
-  field_opts_off(narrative_fields[0], O_WRAP);
+  // field_opts_off(narrative_fields[0], O_WRAP);
 
   // Create the forms
   game_form = new_form(game_fields);
@@ -172,14 +198,14 @@ void ui_run() {
      * ALSO CHECK WORM LAB
      */
     // There was some character. Lock the UI
-    pthread_mutex_lock(&ui_lock);
+    Pthread_mutex_lock(&ui_lock);
 
     // Handle input
     if (ch == KEY_BACKSPACE || ch == KEY_DC || ch == 127) {
       // Delete the last character when the user presses backspace
       form_driver(input_form, REQ_DEL_PREV);
 
-    } else if ((ch == KEY_DOWN || ch == KEY_UP || ch == KEY_RIGHT || ch == KEY_LEFT) && maze_running) {
+    } else if ((ch == KEY_DOWN || ch == KEY_UP || ch == KEY_RIGHT || ch == KEY_LEFT) && maze_running_check() && (stored_player == 1)) {
       if (ch == KEY_RIGHT) {
         maze_x++;
       } else if (ch == KEY_LEFT) {
@@ -239,7 +265,7 @@ void ui_run() {
     }
 
     // Unlock the UI
-    pthread_mutex_unlock(&ui_lock);
+    Pthread_mutex_unlock(&ui_lock);
   }
 }
 
@@ -255,7 +281,7 @@ void ui_run() {
  */
 void ui_display(const char* username, const char* message) {
   // Lock the UI
-  pthread_mutex_lock(&ui_lock);
+  Pthread_mutex_lock(&ui_lock);
 
   // Don't do anything if the UI is not running
   if (ui_running) {
@@ -269,36 +295,46 @@ void ui_display(const char* username, const char* message) {
     // Add a newline
     form_driver(used_form, REQ_NEW_LINE);
 
-    // Display the username
     const char* c = username;
-    while (*c != '\0') {
-      form_driver(used_form, *c);
-      c++;
+
+    // Display the username
+    if (strcmp(username,"Narrator") != 0) {
+      while (*c != '\0') {
+        form_driver(used_form, *c);
+        c++;
+      }
+      form_driver(used_form, ':');
+      form_driver(used_form, ' ');
     }
-    form_driver(used_form, ':');
-    form_driver(used_form, ' ');
 
     // Copy the message over to the display field
     c = message;
     while (*c != '\0') {
       form_driver(used_form, *c);
       c++;
+    } 
+    if (strcmp(username,"Narrator") == 0) { 
+      form_driver(used_form, REQ_NEW_LINE);
     }
-  } else {
+  } 
+  else {
     printf("%s: %s\n", username, message);
   }
 
   // Unlock the UI
-  pthread_mutex_unlock(&ui_lock);
+  Pthread_mutex_unlock(&ui_lock);
 }
 
 
 void ui_maze(int player) {
+  stored_player = player;
+  Pthread_mutex_lock(&maze_lock);
   maze_running = true;
+  Pthread_mutex_unlock(&maze_lock);
   if (ui_running) {
   char** maze = readMaze();
   // Lock the UI
-  pthread_mutex_lock(&ui_lock);
+  Pthread_mutex_lock(&ui_lock);
   if (player == 2) {
     if (ui_running) {
       for (int y = 0; y < SIZE; y++){
@@ -308,6 +344,7 @@ void ui_maze(int player) {
           form_driver(game_form, REQ_NEW_LINE);
       }
     }
+    
   }
   
   else if (player == 1) {
@@ -317,8 +354,9 @@ void ui_maze(int player) {
         maze_y = 0;
       }
       else if (maze[maze_y][maze_x] == 'E') {
+        Pthread_mutex_lock(&maze_lock);
         maze_running = false;
-        return;
+        Pthread_mutex_unlock(&maze_lock);
       }
       for (int y = 0; y < SIZE; y++){
         for (int x = 0; x < SIZE; x++){
@@ -343,7 +381,7 @@ void ui_maze(int player) {
 
 }
   // Unlock the UI
-  pthread_mutex_unlock(&ui_lock);
+  Pthread_mutex_unlock(&ui_lock);
 
 }
 
@@ -352,7 +390,7 @@ void ui_maze(int player) {
  */
 void ui_exit() {
   // Block access to the UI
-  pthread_mutex_lock(&ui_lock);
+  Pthread_mutex_lock(&ui_lock);
 
   // The UI is not running
   ui_running = false;
@@ -373,5 +411,5 @@ void ui_exit() {
   endwin();
 
   // Unlock the UI
-  pthread_mutex_unlock(&ui_lock);
+  Pthread_mutex_unlock(&ui_lock);
 }

@@ -9,6 +9,7 @@
         "initializer_list": "c",
         "ranges": "c",
         "utility": "c",
-        "ui.h": "c"
+        "ui.h": "c",
+        "stdio.h": "c"
     }
 }

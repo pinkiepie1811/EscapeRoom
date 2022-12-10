@@ -9,7 +9,13 @@
 #include "socket.h"
 #include "ui.h"
 
+// The socket to send and receive messages across to and from Player Two
+// Initialize to -1 so we know not to send messages until we are connected to Player Two
 int fd = -1;
+
+// Booleans that tell us whether the Player One has received the first message from
+// Player Two and whether Player One has sent the first message to Player Two
+// For introduction sequence
 bool received_message = false;
 bool sent_message = false;
 
@@ -18,15 +24,16 @@ void input_callback(const char* message) {
   if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0) {
     ui_exit();
   }
-  else if (strcmp(message, ":maze") == 0 || strcmp(message, ":m") == 0) {
+  else if (strcmp(message, ":enter") == 0 || strcmp(message, ":m") == 0) {
     ui_maze(1);
   }
   else { 
     ui_display("Player One", message); 
   }
   if (fd != -1) {
-    if (send_message(fd, (char*)message) == -1) {
-      perror("send_message to Player Two has failed");
+    message_info_t info = {"Player One", (char*)message};
+    if (send_message(fd, info) == -1) {
+      perror("send_message to Player One has failed");
       exit(EXIT_FAILURE);
     }
   }
@@ -36,28 +43,39 @@ void input_callback(const char* message) {
 // Make two threads: one for sending messages and one for receiving messages
 // Thread for receiving messages from Player Two
 void* player_two_receive(void* arg) {
-  // String to hold the received message
-  char* message = malloc(MAX_MESSAGE_LENGTH);
-
   // Continuously receive messages
   while(1) {
       // Read a message from Player Two
-      message = receive_message(fd);
-      if (message == NULL) {
+      message_info_t info = receive_message(fd);
+      if (info.username == NULL) {
         perror("receive_message from Player Two has failed");
         exit(EXIT_FAILURE);
       }
-      if ((strcmp(message, ":q") == 0) || (strcmp(message, ":quit") == 0)) {
+      if (info.message == NULL) {
+        perror("receive_message from Player Two has failed");
+        exit(EXIT_FAILURE);
+      }
+      if ((strcmp(info.message, ":q") == 0) || (strcmp(info.message, ":quit") == 0)) {
         ui_display("WARNING", "PLAYER 2 HAS QUIT");
         break;
+      }
+      if ((strcmp(info.message, ":pull") == 0) || (strcmp(info.message, ":m") == 0)) {
+        continue;
       }
 
       received_message = true;
       // Print the message otherwise
-      ui_display("Player Two", message);
+
+      /**
+       * if (username = username) uidisplay
+       * if username = damage) total_damage+=atoi(message) damage
+       * if username = maze_solved if message = "true" maze
+       */
+      ui_display(info.username, info.message);
+      free(info.username);
+      free(info.message);
   }
   fd = -1;
-  free(message);
   return NULL;
 } // player_two_receive
 
@@ -71,22 +89,44 @@ void* narrate(void* args) {
   ui_display("Narrator","Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond.");
   sleep(1);
   ui_display("Narrator","You need to escape before it is too late!");
-  sleep(5);
+  sleep(1);
   ui_display("Narrator","Your phone starts to buzz in your pocket, but when you check it out, it has no signal.");
-  ui_display("Narrator","Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor? \
-  You try typing something in. What's this? \
-  It seems someone else is on the other end of this line- maybe they are stuck too.\
-  Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
-  while(1){
-    if (received_message && sent_message){
+  sleep(1);
+  ui_display("Narrator","Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor?");
+  sleep(1);
+  ui_display("Narrator","You try typing something in. What's this?");
+  sleep(1);
+  ui_display("Narrator","It seems someone else is on the other end of this line- maybe they are stuck too.");
+  sleep(1);
+  ui_display("Narrator","Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
+  sleep(1);
+  ui_display("Narrator","Try sending a message to each other now!");
+  while(1) {
+    if (received_message && sent_message) {
       break;
     }
   }
-  ui_display("Narrator", "As you consider your situation, the cracks in the wall in front of you start to glow brighter, before they abruptly split apart into a pathway.\
-   You poke your head in, and realize you there looks to be a set of tunnels ahead.\
-   However, the glow in the walls is limited to your room- if you step in you will be walking in the dark. Still, you have little other choice.");
+  ui_display("Narrator", "As you consider your situation, the cracks in the wall in front of you start to glow brighter, before they abruptly split apart into a pathway.");
+  sleep(1);
+  ui_display("Narrator", "You poke your head in, and realize you there looks to be a set of tunnels ahead.");
+  sleep(1);
+  ui_display("Narrator", "However, the glow in the walls is limited to your room- if you step in you will be walking in the dark."); 
+  sleep(1);
+  ui_display("Narrator", "Still, you have little other choice.");
+  sleep(1);
+  ui_display("Narrator", "[Type :enter to enter the darkness. Use your arrow keys to navigate.]");
+  // Wait for maze to start
+  while(1) {
+   if(maze_running_check()) break;
+  }
+  // Wait for maze to finish
+  while(1) {
+   if(!maze_running_check()) break;
+  }
+  ui_display("Narrator", "Congrats! You made it through the maze!");
+  //math time
 return NULL;
-}
+} // narrate
 
 void* connect_players(void* server_socket_fd) {
 
