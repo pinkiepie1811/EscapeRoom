@@ -69,7 +69,19 @@ void* narrate(void* args) {
 
   ui_display("Narrator", "A keypad pops open on the wall near the door. [Type :door]");
 
+  // Wait for door to start
+  while(1) {
+   if(door_running_check()) break;
+  }
+  // Wait for door to finish
+  while(1) {
+   if(!door_running_check()) break;
+  }
+  ui_display("Narrator", "The door opens!");
   // TODO: add stuff about a door w/ a number lock on it here too. they can look at either.
+
+  message_info_t info = {"Data", "opened"};
+  send_message(fd, info);
   
   return NULL;
 } // narrate
@@ -96,7 +108,12 @@ void input_callback(const char* message) {
   }
   // Message ':door' calls the door (display door with lock)
   else if (strcmp(message, ":door") == 0 || strcmp(message, ":d") == 0) {
-    ui_door();
+    if (!door_running_check()) {
+      ui_door(1);
+    }
+    else {
+      ui_display("Narrator", "You are already at the door.");
+    }
   }
   // Otherwise, display the message in the chat
   else { 
@@ -142,6 +159,9 @@ void* player_one_receive(void* args) {
       // Don't display the message if Player Two is trying to show the maze
       // FIX: GET RID OF :m
       else if ((strcmp(info.message, ":enter") == 0) || (strcmp(info.message, ":m") == 0)) {
+        continue;
+      }
+      else if ((strcmp(info.message, ":view") == 0) || (strcmp(info.message, ":v") == 0)) {
         continue;
       }
       // We received data from Player One

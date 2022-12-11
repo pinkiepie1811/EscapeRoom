@@ -30,6 +30,13 @@ void ui_init(input_callback_t callback);
 bool maze_running_check();
 
 /**
+ * Returns the boolean for the door_running
+ * 
+ * \return true or false depending on if the door is currently running
+ */
+bool door_running_check();
+
+/**
  * Run the main UI loop. This function will only return the UI is exiting.
  */
 void ui_run();
@@ -57,6 +64,12 @@ void ui_maze(int player);
  * TODO
  */
 void ui_door();
+
+/**
+ * TODO
+ * 
+ */
+void ui_paper();
 
 /**
  * Stop the user interface and clean up.

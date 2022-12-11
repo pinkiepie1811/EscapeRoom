@@ -70,6 +70,7 @@ int stored_player = -1;
 pthread_mutex_t maze_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t door_lock = PTHREAD_MUTEX_INITIALIZER;
 
+char** paper;
 
 // When true, the door game should run
 bool door_running = false;
@@ -107,6 +108,15 @@ bool maze_running_check() {
   Pthread_mutex_unlock(&maze_lock);
   return maze;
 } // maze_running_check
+
+bool door_running_check() {
+  // Make a copy of the boolean
+  // Lock to avoid race conditions
+  Pthread_mutex_lock(&door_lock);
+  bool door = door_running;
+  Pthread_mutex_unlock(&door_lock);
+  return door;
+} // door_running_check
 
 /**
  * Initialize the user interface and set up a callback function that should be
@@ -203,6 +213,7 @@ void ui_init(input_callback_t callback) {
   // Read the maze
   maze = read_game("maze.txt");
   door = read_game("door.txt");
+  paper = read_game("paper.txt");
 
   // Running
   ui_running = true;
@@ -256,6 +267,35 @@ void ui_run() {
         maze_x = 3;
         maze_y = 0;
       }
+    } 
+    // Case: If the input is arrow keys and the door is running currently
+    else if (((ch == KEY_DOWN) || (ch == KEY_UP) || (ch == KEY_RIGHT) || (ch == KEY_LEFT)) && door_running) {
+      // Adjust the position of the player in the maze accordingly
+      if (ch == KEY_RIGHT) {
+        curr_num++;
+        if (curr_num > 3) {
+          curr_num = 0;
+        }
+      } 
+      else if (ch == KEY_LEFT) {
+        curr_num--;
+        if (curr_num < 0) {
+          curr_num = 3;
+        }
+      } 
+      else if (ch == KEY_DOWN) {
+        nums[curr_num]--;
+        if (nums[curr_num] < '0') {
+          nums[curr_num] = '9';
+        }
+      } 
+      else if (ch == KEY_UP) {
+        nums[curr_num]++;
+        if (nums[curr_num] > '9') {
+          nums[curr_num] = '0';
+        }
+      }
+      ui_door();
     } 
     // Case: Enter character
     else if (ch == KEY_ENTER || ch == '\n') {
@@ -440,10 +480,24 @@ void ui_door() {
   Pthread_mutex_lock(&door_lock);
   door_running = true;
   Pthread_mutex_unlock(&door_lock);
+  // CHANGE
+  char solution[4] = {'1', '1', '1','1'};
+
+  int solved = true;
+    for (int i = 0; i < 4; i++) {
+      if (solution[i] != nums[i]) solved = false;
+    }
+  if (solved) {
+    Pthread_mutex_lock(&door_lock);
+    door_running = false;
+    Pthread_mutex_unlock(&door_lock);
+  }
 
 if (ui_running) {
     // Print the maze
     Pthread_mutex_lock(&ui_lock);
+    form_driver(game_form, REQ_CLR_FIELD);
+    
     for (int y = 0; y < SIZE; y++) {
       for (int x = 0; x < SIZE; x++){
         if (door[y][x] <= '3' && door[y][x] >= '0') {
@@ -461,6 +515,19 @@ if (ui_running) {
     Pthread_mutex_unlock(&ui_lock);
   }
 } // ui_door
+
+void ui_paper() {
+  if (ui_running) {
+    Pthread_mutex_lock(&ui_lock);
+    form_driver(game_form, REQ_CLR_FIELD);
+    for (int y = 0; y < SIZE; y++) {
+        for (int x = 0; x < SIZE; x++){
+          form_driver(game_form, paper[y][x]);
+        }
+        form_driver(game_form, REQ_NEW_LINE);
+    }
+  }
+} // ui_paper
 
 /**
  * Stop the user interface and clean up.
@@ -494,7 +561,9 @@ void ui_exit() {
   for (int i = 0; i < SIZE; i++) {
     free(maze[i]);
     free(door[i]);
+    free(paper[i]);
   }
   free(maze);
   free(door);
+  free(paper);
 } // ui_exit

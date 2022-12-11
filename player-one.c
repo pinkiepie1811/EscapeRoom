@@ -19,6 +19,8 @@ int fd = -1;
 bool received_message = false;
 bool sent_message = false;
 
+bool door_done = false;
+
 /**
  * Thread for pacing the narrative of the game and controlling the game play
  */
@@ -72,11 +74,21 @@ void* narrate(void* args) {
   while(1) {
    if(!maze_running_check()) break;
   }
-  ui_display("Narrator", "Congrats! You made it through the maze!");
+  ui_display("Narrator", "Congrats! You made it through the maze! You step out of the darkness to a large cavern.");
+  sleep(1);
+
   message_info_t info = {"Data", "escaped"};
   send_message(fd, info);
 
-  // TODO: Math Time
+  ui_display("Narrator", "You see a piece of paper. [Type :view to look at the paper");
+  sleep(1);
+
+  while (1) {
+    if (door_done) {
+      break;
+    }
+  }
+  ui_display("Narrator", "MONSTOR");
 
   return NULL;
 } // narrate
@@ -100,6 +112,9 @@ void input_callback(const char* message) {
     else {
       ui_display("Narrator", "You are already in the maze.");
     }
+  }
+  else if (strcmp(message, ":view") == 0 || strcmp(message, ":v") == 0) {
+    ui_paper();
   }
   // Otherwise, display the message in the chat
   else { 
@@ -144,6 +159,14 @@ void* player_two_receive(void* arg) {
       // Don't display the message if Player One is trying to start the maze
       // FIX: GET RID OF :m
       if ((strcmp(info.message, ":pull") == 0) || (strcmp(info.message, ":m") == 0)) {
+        continue;
+      }
+      else if ((strcmp(info.message, ":door") == 0) || (strcmp(info.message, ":m") == 0)) {
+        continue;
+      }
+      // We received data from Player One
+      else if (strcmp(info.username, "Data") == 0) {
+        if (strcmp(info.message, "opened") == 0) door_done = true;
         continue;
       }
 
