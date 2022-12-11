@@ -15,71 +15,15 @@ int fd = -1;
 
 // Booleans that tell us whether the Player One has received the first message from
 // Player Two and whether Player One has sent the first message to Player Two
-// For introduction sequence
+// for introduction sequence
 bool received_message = false;
 bool sent_message = false;
 
-// This function is run whenever the user hits enter after typing a message
-void input_callback(const char* message) {
-  if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0) {
-    ui_exit();
-  }
-  else if (strcmp(message, ":enter") == 0 || strcmp(message, ":m") == 0) {
-    ui_maze(1);
-  }
-  else { 
-    ui_display("Player One", message); 
-  }
-  if (fd != -1) {
-    message_info_t info = {"Player One", (char*)message};
-    if (send_message(fd, info) == -1) {
-      perror("send_message to Player One has failed");
-      exit(EXIT_FAILURE);
-    }
-  }
-  sent_message = true;
-}
-
-// Make two threads: one for sending messages and one for receiving messages
-// Thread for receiving messages from Player Two
-void* player_two_receive(void* arg) {
-  // Continuously receive messages
-  while(1) {
-      // Read a message from Player Two
-      message_info_t info = receive_message(fd);
-      if (info.username == NULL) {
-        perror("receive_message from Player Two has failed");
-        exit(EXIT_FAILURE);
-      }
-      if (info.message == NULL) {
-        perror("receive_message from Player Two has failed");
-        exit(EXIT_FAILURE);
-      }
-      if ((strcmp(info.message, ":q") == 0) || (strcmp(info.message, ":quit") == 0)) {
-        ui_display("WARNING", "PLAYER 2 HAS QUIT");
-        break;
-      }
-      if ((strcmp(info.message, ":pull") == 0) || (strcmp(info.message, ":m") == 0)) {
-        continue;
-      }
-
-      received_message = true;
-      // Print the message otherwise
-
-      /**
-       * if (username = username) uidisplay
-       * if username = damage) total_damage+=atoi(message) damage
-       * if username = maze_solved if message = "true" maze
-       */
-      ui_display(info.username, info.message);
-      free(info.username);
-      free(info.message);
-  }
-  fd = -1;
-  return NULL;
-} // player_two_receive
-
+/**
+ * Thread for pacing the narrative of the game and controlling the game play
+ */
 void* narrate(void* args) {
+  // Introduction sequence
   ui_display("Narrator","You wake up.");
   sleep(1);
   ui_display("Narrator","Taking a look around, you see you are trapped in a stone chamber.");
@@ -101,11 +45,15 @@ void* narrate(void* args) {
   ui_display("Narrator","Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
   sleep(1);
   ui_display("Narrator","Try sending a message to each other now!");
+
+  // Wait for players to try the chat
   while(1) {
     if (received_message && sent_message) {
       break;
     }
   }
+
+  // Start maze sequence
   ui_display("Narrator", "As you consider your situation, the cracks in the wall in front of you start to glow brighter, before they abruptly split apart into a pathway.");
   sleep(1);
   ui_display("Narrator", "You poke your head in, and realize you there looks to be a set of tunnels ahead.");
@@ -115,6 +63,7 @@ void* narrate(void* args) {
   ui_display("Narrator", "Still, you have little other choice.");
   sleep(1);
   ui_display("Narrator", "[Type :enter to enter the darkness. Use your arrow keys to navigate.]");
+  
   // Wait for maze to start
   while(1) {
    if(maze_running_check()) break;
@@ -124,38 +73,134 @@ void* narrate(void* args) {
    if(!maze_running_check()) break;
   }
   ui_display("Narrator", "Congrats! You made it through the maze!");
-  //math time
-return NULL;
+  message_info_t info = {"Data", "escaped"};
+  send_message(fd, info);
+
+  // TODO: Math Time
+
+  return NULL;
 } // narrate
 
-void* connect_players(void* server_socket_fd) {
+/**
+ * This function is run whenever Player One hits enter after typing a message.
+ * 
+ * \param message  The string holding the message that Player One wants to send to Player Two
+ */
+void input_callback(const char* message) {
+  // Quitting mechanism
+  if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0) {
+    ui_exit();
+  }
+  // Message of ':enter' calls the maze game 
+  // FIX: GET RID OF :m
+  else if (strcmp(message, ":enter") == 0 || strcmp(message, ":m") == 0) {
+    if (!maze_running_check()) {
+      ui_maze(1);
+    }
+    else {
+      ui_display("Narrator", "You are already in the maze.");
+    }
+  }
+  // Otherwise, display the message in the chat
+  else { 
+    ui_display("Player One", message); 
+  }
+  // Send the message to Player Two if they are connected
+  if (fd != -1) {
+    message_info_t info = {"Player One", (char*)message};
+    if (send_message(fd, info) == -1) {
+      perror("send_message to Player One has failed");
+      exit(EXIT_FAILURE);
+    }
+  }
+  // We have now sent a message, so set this bool to true
+  sent_message = true;
+} // input_callback
 
+/**
+ * Thread function for receiving messages from Player Two.
+ * 
+ * No arguments are passed in.
+ */
+void* player_two_receive(void* arg) {
+  // Continuously receive messages
+  while (1) {
+      // Read a message from Player Two
+      message_info_t info = receive_message(fd);
+      // Error checks
+      if (info.username == NULL) {
+        perror("receive_message from Player Two has failed");
+        exit(EXIT_FAILURE);
+      }
+      if (info.message == NULL) {
+        perror("receive_message from Player Two has failed");
+        exit(EXIT_FAILURE);
+      }
+      // Break out of the receive loop if Player Two quit
+      if ((strcmp(info.message, ":q") == 0) || (strcmp(info.message, ":quit") == 0)) {
+        ui_display("WARNING", "PLAYER 2 HAS QUIT");
+        break;
+      }
+      // Don't display the message if Player One is trying to start the maze
+      // FIX: GET RID OF :m
+      if ((strcmp(info.message, ":pull") == 0) || (strcmp(info.message, ":m") == 0)) {
+        continue;
+      }
+
+      // We have now received a message; set bool to to true
+      received_message = true;
+      
+      /**
+       * if (username = username) uidisplay
+       * if username = damage) total_damage+=atoi(message) damage
+       * if username = maze_solved if message = "true" maze
+       */
+      // Print the message otherwise
+      ui_display(info.username, info.message);
+      // Free the message information
+      free(info.username);
+      free(info.message);
+  }
+  // fd is invalid now
+  fd = -1;
+  return NULL;
+} // player_two_receive
+
+/**
+ * Thread function to seek connection from Player Two.
+ * 
+ * \param server_socket_fd  The server fd to allow for connection to Player Two 
+ */
+void* connect_players(void* server_socket_fd) {
+  // Get the server fd from the arguments
   int server_fd = *((int*)server_socket_fd);
 
-  // Wait for a client to connect
+  // Wait for Player Two to connect
   fd = server_socket_accept(server_fd);
   if (fd == -1) {
     perror("accept failed");
     exit(EXIT_FAILURE);
   }
-  ui_display("","connected");
   
-  // Create a separate thread to handle communication between players
+  // Create a separate thread to handle communication between players (receive from Player Two)
   pthread_t receive_thread;
   if (pthread_create(&receive_thread, NULL, player_two_receive, NULL) != 0) {
     perror("pthread_create failed");
     exit(EXIT_FAILURE);
   }
 
-  pthread_t narrative;
-  if (pthread_create(&narrative, NULL, narrate, NULL) != 0) {
+  // Create a separate thread for the narration
+  pthread_t narration;
+  if (pthread_create(&narration, NULL, narrate, NULL) != 0) {
     perror("pthread_create failed");
     exit(EXIT_FAILURE);
   }
   
   return NULL;
-}
+} // connect_players
 
+// Set up connection and communication to Player Two. 
+// Set up UI
 int main() {
   // Open a server socket
   unsigned short port = 0;
@@ -171,6 +216,7 @@ int main() {
     exit(EXIT_FAILURE);
   }
 
+  // Start another thread to connect the players
   pthread_t accept_connection;
   if (pthread_create(&accept_connection, NULL, connect_players, (void*)&server_socket_fd) != 0) {
     perror("pthread_create failed");
@@ -181,9 +227,7 @@ int main() {
   // each time the user hits enter to send a message.
   ui_init(input_callback);
 
-  // Display title screen with port number on it
-  // Replace the printf statement below with title screen
-  // printf("Server listening on port %u\n", port);
+  // Display the port number for Player Two to connect to
   char buffer[50];
   sprintf(buffer, "Connect Player Two to port %u\n", port);
   ui_display("INFO", buffer);
@@ -191,8 +235,9 @@ int main() {
   // Run the UI loop. This function only returns once we call ui_stop() somewhere in the program.
   ui_run();
   
-  // Close socket EDIT
-  // close(server_socket_fd);
+  // TODO: CHECK THIS
+  // TODO: CLOSE ALL SOCKETS, FREE ALL THINGS
+  close(server_socket_fd);
 
   return 0;
 } // main

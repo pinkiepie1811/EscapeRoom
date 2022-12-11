@@ -1,11 +1,12 @@
+// Modified from Peer-to-Peer Chat lab
 #include "ui.h"
-#include "mazegame.h"
+#include "game.h"
 
 #include <form.h>
 #include <pthread.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
 
 // The height of the input field in the user interface
@@ -53,13 +54,29 @@ static input_callback_t input_callback;
 
 // When true, the UI should continue running
 bool ui_running = false;
+
+// When true, the maze game should run
 bool maze_running = false;
+// Global variables to keep track of where the player in the maze is
 int maze_x = 3;
 int maze_y = 0;
+// Global maze
+char** maze;
 
+// The player that is using the UI (Player One or Player Two)
 int stored_player = -1;
 
+// Lock for the maze_running boolean 
 pthread_mutex_t maze_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t door_lock = PTHREAD_MUTEX_INITIALIZER;
+
+
+// When true, the door game should run
+bool door_running = false;
+// Door stuff
+char nums[4] = {'0', '0', '0', '0'};
+int curr_num = 0;
+char** door;
 
 // Error Protection for locking
 void Pthread_mutex_lock(pthread_mutex_t* mutex) {
@@ -77,12 +94,19 @@ void Pthread_mutex_unlock(pthread_mutex_t* mutex) {
   }
 } // Pthread_mutex_unlock
 
+/**
+ * Returns the boolean for the maze_running
+ * 
+ * \return true or false depending on if the maze is currently running
+ */
 bool maze_running_check() {
+  // Make a copy of the boolean
+  // Lock to avoid race conditions
   Pthread_mutex_lock(&maze_lock);
   bool maze = maze_running;
   Pthread_mutex_unlock(&maze_lock);
   return maze;
-}
+} // maze_running_check
 
 /**
  * Initialize the user interface and set up a callback function that should be
@@ -176,9 +200,13 @@ void ui_init(input_callback_t callback) {
   pthread_mutexattr_settype(&ui_lock_attr, PTHREAD_MUTEX_RECURSIVE);
   pthread_mutex_init(&ui_lock, &ui_lock_attr);
 
+  // Read the maze
+  maze = read_game("maze.txt");
+  door = read_game("door.txt");
+
   // Running
   ui_running = true;
-}
+} // ui_init
 
 /**
  * Run the main UI loop. This function will only return the UI is exiting.
@@ -192,40 +220,45 @@ void ui_run() {
     // If there was no character, try again
     if (ch == -1) continue;
 
-
-    /*
-     * TO DO: check if the input is for the game or the chat
-     * ALSO CHECK WORM LAB
-     */
     // There was some character. Lock the UI
-    Pthread_mutex_lock(&ui_lock);
+    pthread_mutex_lock(&ui_lock);
 
     // Handle input
+    // Case: Delete/backspace character
     if (ch == KEY_BACKSPACE || ch == KEY_DC || ch == 127) {
       // Delete the last character when the user presses backspace
       form_driver(input_form, REQ_DEL_PREV);
 
-    } else if ((ch == KEY_DOWN || ch == KEY_UP || ch == KEY_RIGHT || ch == KEY_LEFT) && maze_running_check() && (stored_player == 1)) {
+    } 
+    // Case: If the input is arrow keys and the maze is running currently
+    else if (((ch == KEY_DOWN) || (ch == KEY_UP) || (ch == KEY_RIGHT) || (ch == KEY_LEFT)) && maze_running && stored_player == 1) {
+      // Adjust the position of the player in the maze accordingly
       if (ch == KEY_RIGHT) {
         maze_x++;
-      } else if (ch == KEY_LEFT) {
+      } 
+      else if (ch == KEY_LEFT) {
         maze_x--;
-      } else if (ch == KEY_DOWN) {
+      } 
+      else if (ch == KEY_DOWN) {
         maze_y++;
-      } else if (ch == KEY_UP) {
+      } 
+      else if (ch == KEY_UP) {
         maze_y--;
       }
-      if (maze_x>=0 && maze_x < SIZE && maze_y >= 0 && maze_y < SIZE) {
-        if (ui_running) form_driver(game_form, REQ_CLR_FIELD);
+      // If the player is trying to move within the maze, clear the previous maze and print the new maze with
+      // updated coordinates for the paper
+      if ((maze_x >= 0) && (maze_x < SIZE) && (maze_y >= 0) && (maze_y < SIZE)) {
+        form_driver(game_form, REQ_CLR_FIELD);
         ui_maze(1);
       }
+      // Otherwise, the player is out of bounds; keep them at the start
       else {
-        maze_x=3;
-        maze_y=0;
+        maze_x = 3;
+        maze_y = 0;
       }
-      
-
-    } else if (ch == KEY_ENTER || ch == '\n') {
+    } 
+    // Case: Enter character
+    else if (ch == KEY_ENTER || ch == '\n') {
       // When the user presses enter, report new input
 
       // Shift to the "next" field (same field) to update the buffer
@@ -258,16 +291,16 @@ void ui_run() {
         // Clear the input field, but only if the UI didn't exit
         if (ui_running) form_driver(input_form, REQ_CLR_FIELD);
       }
-
-    } else {
+    } 
+    else {
       // Report normal input characters to the input field
       form_driver(input_form, ch);
     }
 
     // Unlock the UI
-    Pthread_mutex_unlock(&ui_lock);
+    pthread_mutex_unlock(&ui_lock);
   }
-}
+} // ui_run
 
 /**
  * Add a new message to the user interface's display pane.
@@ -285,20 +318,23 @@ void ui_display(const char* username, const char* message) {
 
   // Don't do anything if the UI is not running
   if (ui_running) {
+    // Which form are we using?
     FORM* used_form;
     if (strcmp(username,"Narrator") == 0) {
       used_form = narrative_form;
     }
-    else{
+    else {
       used_form = display_form;
     }
+
     // Add a newline
     form_driver(used_form, REQ_NEW_LINE);
 
+    // Get the username
     const char* c = username;
 
-    // Display the username
-    if (strcmp(username,"Narrator") != 0) {
+    // Display the username if the username is not "Narrator"
+    if (strcmp(username, "Narrator") != 0) {
       while (*c != '\0') {
         form_driver(used_form, *c);
         c++;
@@ -307,83 +343,124 @@ void ui_display(const char* username, const char* message) {
       form_driver(used_form, ' ');
     }
 
-    // Copy the message over to the display field
+    // Copy the message over to the field
     c = message;
     while (*c != '\0') {
       form_driver(used_form, *c);
       c++;
     } 
+    // If the username is "Narrator", put an extra newline for readability
     if (strcmp(username,"Narrator") == 0) { 
       form_driver(used_form, REQ_NEW_LINE);
     }
-  } 
+  }
+  // Default 
   else {
     printf("%s: %s\n", username, message);
   }
 
   // Unlock the UI
   Pthread_mutex_unlock(&ui_lock);
-}
+} // ui_display
 
-
+/**
+ * Run the maze in the UI
+ * 
+ * \param player  An int indicating which player is calling the function
+ */
 void ui_maze(int player) {
+  // Store which player is calling the UI
   stored_player = player;
+
+  // Set maze_running to true
   Pthread_mutex_lock(&maze_lock);
   maze_running = true;
   Pthread_mutex_unlock(&maze_lock);
+
   if (ui_running) {
-  char** maze = readMaze();
-  // Lock the UI
-  Pthread_mutex_lock(&ui_lock);
-  if (player == 2) {
-    if (ui_running) {
-      for (int y = 0; y < SIZE; y++){
-          for (int x = 0; x < SIZE; x++){
-              form_driver(game_form, maze[y][x]);
-          }
-          form_driver(game_form, REQ_NEW_LINE);
+    // Lock the UI
+    Pthread_mutex_lock(&ui_lock);
+    // PLAYER TWO // 
+    if (player == 2) {
+      // Print the maze
+      for (int y = 0; y < SIZE; y++) {
+        for (int x = 0; x < SIZE; x++){
+          form_driver(game_form, maze[y][x]);
+        }
+        form_driver(game_form, REQ_NEW_LINE);
       }
     }
-    
-  }
-  
-  else if (player == 1) {
-    if (ui_running) {
+    // PLAYER ONE // 
+    else if (player == 1) {
+      // If the player hit a wall, set them back to the beginning
       if (maze[maze_y][maze_x] == '*') {
         maze_x = 3;
         maze_y = 0;
       }
+      // If the player is at the end, the maze is not running
       else if (maze[maze_y][maze_x] == 'E') {
         Pthread_mutex_lock(&maze_lock);
         maze_running = false;
         Pthread_mutex_unlock(&maze_lock);
       }
-      for (int y = 0; y < SIZE; y++){
-        for (int x = 0; x < SIZE; x++){
-         if (y == maze_y && x == maze_x) {
-          form_driver(game_form, '@');
+      // Now display the borders of the maze and the player's current position
+      for (int y = 0; y < SIZE; y++) {
+        for (int x = 0; x < SIZE; x++) {
+          // Print the player
+          if (y == maze_y && x == maze_x) {
+            form_driver(game_form, '@');
           }
-         
-         else if (y == 0 || y == SIZE -1){
-           form_driver(game_form, maze[y][x]);
-          }
-         else if (x == 0 || x == SIZE -1){
+          // Display the vertical border
+          else if (y == 0 || y == SIZE -1) {
             form_driver(game_form, maze[y][x]);
           }
+          // Display the horizontal border
+          else if (x == 0 || x == SIZE -1){
+            form_driver(game_form, maze[y][x]);
+          }
+          // Everywhere else, print a space
           else {
             form_driver(game_form, ' ');
           }
         }
+        // Print a newline
         form_driver(game_form, REQ_NEW_LINE);
       }
     }
   }
-
-}
   // Unlock the UI
   Pthread_mutex_unlock(&ui_lock);
+} // ui_maze
 
-}
+
+void ui_door() {
+  stored_player = 2;
+  
+ // Set maze_running to true
+  Pthread_mutex_lock(&door_lock);
+  door_running = true;
+  Pthread_mutex_unlock(&door_lock);
+
+if (ui_running) {
+    // Print the maze
+    Pthread_mutex_lock(&ui_lock);
+    for (int y = 0; y < SIZE; y++) {
+      for (int x = 0; x < SIZE; x++){
+        if (door[y][x] <= '3' && door[y][x] >= '0') {
+
+          char ch = nums[(int) (door[y][x] - '0')];
+          form_driver(game_form, ch);
+        }
+        else {
+          form_driver(game_form, door[y][x]);
+        } 
+      }
+      form_driver(game_form, REQ_NEW_LINE);
+    }
+
+    Pthread_mutex_unlock(&ui_lock);
+  }
+} // ui_door
 
 /**
  * Stop the user interface and clean up.
@@ -412,4 +489,12 @@ void ui_exit() {
 
   // Unlock the UI
   Pthread_mutex_unlock(&ui_lock);
-}
+
+  // Free the maze
+  for (int i = 0; i < SIZE; i++) {
+    free(maze[i]);
+    free(door[i]);
+  }
+  free(maze);
+  free(door);
+} // ui_exit

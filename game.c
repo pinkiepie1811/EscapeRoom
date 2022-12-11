@@ -1,4 +1,4 @@
-#include "mazegame.h"
+#include "game.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,11 +7,11 @@
 #include <form.h>
 
 /**
- * Reads in the maze from 'maze.txt' and stores it into an array of strings.
+ * Reads in the graphic from text file and stores it into an array of strings.
  * 
  * \return An array of strings holding the maze
  */
-char** readMaze() {
+char** read_game(char* file) {
     /* -- MALLOC MEMORY -- */
     // Malloc space for a 2D array (array of strings)
     char** game_maze = (char**)malloc(sizeof(char*) * SIZE);
@@ -21,7 +21,7 @@ char** readMaze() {
     }
 
     /* -- OPEN THE FILE-- */
-    FILE* mazefile = fopen("maze.txt", "r");
+    FILE* mazefile = fopen(file, "r");
     if (mazefile == NULL) {
         perror("Failed to read maze from maze.txt");
         exit(EXIT_FAILURE);

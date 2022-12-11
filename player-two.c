@@ -9,77 +9,24 @@
 #include "socket.h"
 #include "ui.h"
 
+// The socket to send and receive messages across to and from Player Two
+// Initialize to -1 so we know not to send messages until we are connected to Player Two
 int fd = -1;
+
+// Booleans that tell us whether the Player One has received the first message from
+// Player Two and whether Player One has sent the first message to Player Two
+// for introduction sequence
 bool received_message = false;
 bool sent_message = false;
 
-// This function is run whenever the user hits enter after typing a message
-void input_callback(const char* message) {
-  if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0) {
-    ui_exit();
-  }
-  else if (strcmp(message, ":pull") == 0 || strcmp(message, ":m") == 0) {
-    ui_maze(2);
-    ui_display("Narrator", "[You may have pulled the lever, but remember, when you want to look at the door, type :door]");
-  }
-  else { 
-    ui_display("Player Two", message); 
-  }
-  if (fd != -1) {
-    message_info_t info = {"Player Two", (char*)message};
-    if (send_message(fd, info) == -1) {
-      perror("send_message to Player One has failed");
-      exit(EXIT_FAILURE);
-    }
-    sent_message = true;
-  }
-}
+// Boolean that tells us if Player One has made it through the maze
+bool maze_done;
 
-
-// Make two threads: one for sending messages and one for receiving messages
-// Thread for receiving messages from Player One
-void* player_one_receive(void* args) {
-  // String to hold the received message
-  char* message = malloc(MAX_MESSAGE_LENGTH);
-
-  // Continuously receive messages
-  while(1) {
-      // Read a message from Player One
-      // Read a message from Player Two
-      message_info_t info = receive_message(fd);
-      if (info.username == NULL) {
-        perror("receive_message from Player One has failed");
-        exit(EXIT_FAILURE);
-      }
-      if (info.message == NULL) {
-        perror("receive_message from Player One has failed");
-        exit(EXIT_FAILURE);
-      }
-      if ((strcmp(info.message, ":q") == 0) || (strcmp(info.message, ":quit") == 0)) {
-        ui_display("WARNING", "PLAYER 1 HAS QUIT");
-        break;
-      }
-      if ((strcmp(info.message, ":enter") == 0) || (strcmp(info.message, ":m") == 0)) {
-        continue;
-      }
-
-      received_message = true;
-      // Print the message otherwise
-
-      /**
-       * if (username = username) uidisplay
-       * if username = damage) total_damage+=atoi(message) damage
-       * if username = maze_solved if message = "true" maze
-       */
-      ui_display(info.username, info.message);
-      free(info.username);
-      free(info.message);
-  }
-  fd = -1;
-  return NULL;
-} // player_one_receive
-
+/**
+ * Thread for pacing the narrative of the game and controlling the game play
+ */
 void* narrate(void* args) {
+  // Introduction sequence
   ui_display("Narrator","You wake up.");
   sleep(1);
   ui_display("Narrator","Taking a look around, you see you are trapped in a stone chamber with a large padlocked door to the side.");
@@ -101,20 +48,129 @@ void* narrate(void* args) {
   ui_display("Narrator","Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
   sleep(1);
   ui_display("Narrator","Try sending a message to each other now!");
+
+  // Wait for players to try the chat
   while(1){
     if (received_message && sent_message) {
       break;
     }
   }
+
+  // Start maze sequence
   ui_display("Narrator", "Other than the cracks and the door, the room you are in is empty, save for a strange lever almost directly in front of where you woke up.");
   sleep(1);
-  ui_display("Narrator", "Pull the lever [type :pull] or look at the door [type :door]?");
+  ui_display("Narrator", "Pull the lever [type :pull]");
 
-  // add stuff about a door w/ a number lock on it here too. they can look at either.
+  while (1) {
+    if (maze_done) {
+      break;
+    }
+  }
+
+  ui_display("Narrator", "A keypad pops open on the wall near the door. [Type :door]");
+
+  // TODO: add stuff about a door w/ a number lock on it here too. they can look at either.
   
   return NULL;
-}
+} // narrate
 
+/**
+ * This function is run whenever Player Two hits enter after typing a message.
+ * 
+ * \param message  The string holding the message that Player Two wants to send to Player One
+ */
+void input_callback(const char* message) {
+  // Quitting mechanism
+  if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0) {
+    ui_exit();
+  }
+  // Message ':pull' calls the maze game 
+  // FIX: GET RID OF :m
+  else if (strcmp(message, ":pull") == 0 || strcmp(message, ":m") == 0) {
+    if (!maze_running_check()) {
+      ui_maze(2);
+    }
+    else {
+      ui_display("Narrator", "You have already pulled the lever.");
+    }
+  }
+  // Message ':door' calls the door (display door with lock)
+  else if (strcmp(message, ":door") == 0 || strcmp(message, ":d") == 0) {
+    ui_door();
+  }
+  // Otherwise, display the message in the chat
+  else { 
+    ui_display("Player Two", message); 
+  }
+  // Send the message to Player One if they are connected
+  if (fd != -1) {
+    message_info_t info = {"Player Two", (char*)message};
+    if (send_message(fd, info) == -1) {
+      perror("send_message to Player One has failed");
+      exit(EXIT_FAILURE);
+    }
+  }
+  // We have now sent a message, so set this bool to true
+  sent_message = true;
+} // input_callback
+
+
+/**
+ * Thread function for receiving messages from Player One.
+ * 
+ * No arguments are passed in.
+ */
+void* player_one_receive(void* args) {
+  // Continuously receive messages
+  while(1) {
+      // Read a message from Player One
+      message_info_t info = receive_message(fd);
+      // Error checks
+      if (info.username == NULL) {
+        perror("receive_message from Player One has failed");
+        exit(EXIT_FAILURE);
+      }
+      if (info.message == NULL) {
+        perror("receive_message from Player One has failed");
+        exit(EXIT_FAILURE);
+      }
+      // Break out of the receive loop if Player One quit
+      if ((strcmp(info.message, ":q") == 0) || (strcmp(info.message, ":quit") == 0)) {
+        ui_display("WARNING", "PLAYER 1 HAS QUIT");
+        break;
+      }
+      // Don't display the message if Player Two is trying to show the maze
+      // FIX: GET RID OF :m
+      else if ((strcmp(info.message, ":enter") == 0) || (strcmp(info.message, ":m") == 0)) {
+        continue;
+      }
+      // We received data from Player One
+      else if (strcmp(info.username, "Data") == 0) {
+        if (strcmp(info.message, "escaped") == 0) maze_done = true;
+        continue;
+      }
+
+      // We have now received a message; set bool to to true
+      received_message = true;
+
+      /**
+       * if (username = username) uidisplay
+       * if username = damage) total_damage+=atoi(message) damage
+       * if username = maze_solved if message = "true" maze
+       */
+      // Print the message otherwise
+      ui_display(info.username, info.message);
+      // Free the message information
+      free(info.username);
+      free(info.message);
+  }
+  // fd is invalid now
+  fd = -1;
+  return NULL;
+} // player_one_receive
+
+// Set up connection and communication to Player One. 
+// Set up UI
 int main(int argc, char** argv) {
   // Check user input
   if (argc != 3) {
@@ -133,21 +189,20 @@ int main(int argc, char** argv) {
     exit(EXIT_FAILURE);
   }
 
-  // Create a separate thread to handle communication between players
+  // Create a separate thread to handle communication between players (receive from Player One)
   pthread_t receive_thread;
   if (pthread_create(&receive_thread, NULL, player_one_receive, NULL) != 0) {
     perror("pthread_create failed");
     exit(EXIT_FAILURE);
   }
 
-
   // Set up the user interface. The input_callback function will be called
   // each time the user hits enter to send a message.
   ui_init(input_callback);
 
-
-  pthread_t narrative;
-  if (pthread_create(&narrative, NULL, narrate, NULL) != 0) {
+  // Create a separate thread for the narration
+  pthread_t narration;
+  if (pthread_create(&narration, NULL, narrate, NULL) != 0) {
     perror("pthread_create failed");
     exit(EXIT_FAILURE);
   }
@@ -155,8 +210,9 @@ int main(int argc, char** argv) {
   // Run the UI loop. This function only returns once we call ui_stop() somewhere in the program.
   ui_run();
 
-  // Close socket EDIT
-  // close(socket_fd);
+  // TODO: CHECK THIS
+  // TODO: CLOSE ALL SOCKETS, FREE ALL THINGS
+  close(fd);
 
   return 0;
-}
+} // main

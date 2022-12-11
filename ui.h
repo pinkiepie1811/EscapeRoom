@@ -1,3 +1,4 @@
+// Modified from Peer-to-Peer Chat lab
 #if !defined(UI_H)
 #define UI_H
 
@@ -11,15 +12,6 @@
  */
 typedef void (*input_callback_t)(const char*);
 
-
-/**
- * @brief Checks if the maze is currently being explored
- * 
- * @return true 
- * @return false 
- */
-bool maze_running_check();
-
 /**
  * Initialize the user interface and set up a callback function that should be
  * called every time there is a new message to send.
@@ -29,6 +21,13 @@ bool maze_running_check();
  *                  need to retain it after the callback function returns.
  */
 void ui_init(input_callback_t callback);
+
+/**
+ * Returns the boolean for the maze_running
+ * 
+ * \return true or false depending on if the maze is currently running
+ */
+bool maze_running_check();
 
 /**
  * Run the main UI loop. This function will only return the UI is exiting.
@@ -47,7 +46,17 @@ void ui_run();
  */
 void ui_display(const char* username, const char* message);
 
+/**
+ * Run the maze in the UI
+ * 
+ * \param player  An int indicating which player is calling the function
+ */
 void ui_maze(int player);
+
+/** 
+ * TODO
+ */
+void ui_door();
 
 /**
  * Stop the user interface and clean up.

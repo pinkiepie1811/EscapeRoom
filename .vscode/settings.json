@@ -10,6 +10,8 @@
         "ranges": "c",
         "utility": "c",
         "ui.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "stdbool.h": "c",
+        "form.h": "c"
     }
 }
