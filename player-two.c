@@ -28,25 +28,25 @@ bool maze_done;
 void* narrate(void* args) {
   // Introduction sequence
   ui_display("Narrator","You wake up.");
-  sleep(1);
+  sleep(2);
   ui_display("Narrator","Taking a look around, you see you are trapped in a stone chamber with a large padlocked door to the side.");
-  sleep(1);
+  sleep(2);
   ui_display("Narrator","You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.");
-  sleep(1);
+  sleep(2);
   ui_display("Narrator","Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond.");
-  sleep(1);
+  sleep(2);
   ui_display("Narrator","You need to escape before it is too late!");
-  sleep(1);
+  sleep(2);
   ui_display("Narrator","Your phone starts to buzz in your pocket, but when you check it out, it has no signal.");
-  sleep(1);
+  sleep(2);
   ui_display("Narrator","Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor?");
-  sleep(1);
+  sleep(2);
   ui_display("Narrator","You try typing something in. What's this?");
-  sleep(1);
+  sleep(2);
   ui_display("Narrator","It seems someone else is on the other end of this line- maybe they are stuck too.");
-  sleep(1);
+  sleep(2);
   ui_display("Narrator","Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
-  sleep(1);
+  sleep(2);
   ui_display("Narrator","Try sending a message to each other now!");
 
   // Wait for players to try the chat
@@ -58,7 +58,7 @@ void* narrate(void* args) {
 
   // Start maze sequence
   ui_display("Narrator", "Other than the cracks and the door, the room you are in is empty, save for a strange lever almost directly in front of where you woke up.");
-  sleep(1);
+  sleep(2);
   ui_display("Narrator", "Pull the lever [type :pull]");
 
   while (1) {
@@ -82,6 +82,28 @@ void* narrate(void* args) {
 
   message_info_t info = {"Data", "opened"};
   send_message(fd, info);
+
+  //Anagram game
+  ui_display("Narrator", "Another emtpy room!");
+  ui_display("Narrator", "But wait!! There is a small box in the corner. Let's see what's inside. [type :open]");
+
+  while(1){
+    if(box_running_check() == 0 || box_running_check() == 1) break;
+  }
+
+  ui_display("Narrator", "These words do not make much sense, but it seems like the letters can be moved around.");
+  sleep(2);
+  ui_display("Narrator", "Enter '[correct sequence]' to rearrange these words");
+
+  while(1){
+    if (box_running_check() == 2){
+      ui_display("Narrator", "It seems like your partner is struggling. Communicate and help them.");
+    }
+    if (box_running_check() == 3) break;
+  }
+
+  ui_display("Narrator", "Congratulations! Both of you have cracked the code!!.. (room vibrating, werid noise,...) Now.. you Computer Scientists should prepare yourself for SEGFAULT blah blah blah.");
+
   
   return NULL;
 } // narrate
@@ -92,13 +114,12 @@ void* narrate(void* args) {
  * \param message  The string holding the message that Player Two wants to send to Player One
  */
 void input_callback(const char* message) {
-  // Quitting mechanism
+  // Quitting mechanismƒ
   if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0) {
     ui_exit();
   }
   // Message ':pull' calls the maze game 
-  // FIX: GET RID OF :m
-  else if (strcmp(message, ":pull") == 0 || strcmp(message, ":m") == 0) {
+  else if (strcmp(message, ":pull") == 0) {
     if (!maze_running_check()) {
       ui_maze(2);
     }
@@ -109,12 +130,24 @@ void input_callback(const char* message) {
   // Message ':door' calls the door (display door with lock)
   else if (strcmp(message, ":door") == 0 || strcmp(message, ":d") == 0) {
     if (!door_running_check()) {
-      ui_door(1);
+      ui_door();
     }
     else {
       ui_display("Narrator", "You are already at the door.");
     }
   }
+
+    // Message ':open' calls the box 
+  else if (strcmp(message, ":open") == 0 || strcmp(message, ":o") == 0) {
+    if (box_running_check() == 2 || box_running_check() == 3) {
+      ui_box(2);
+    }
+    else {
+      ui_display("Narrator", "You have already opened this box");
+    }
+  }
+  
+  
   // Otherwise, display the message in the chat
   else { 
     ui_display("Player Two", message); 
@@ -156,9 +189,11 @@ void* player_one_receive(void* args) {
         ui_display("WARNING", "PLAYER 1 HAS QUIT");
         break;
       }
-      // Don't display the message if Player Two is trying to show the maze
-      // FIX: GET RID OF :m
-      else if ((strcmp(info.message, ":enter") == 0) || (strcmp(info.message, ":m") == 0)) {
+      // Don't display the message if Player One is trying to show the maze
+      else if ((strcmp(info.message, ":enter") == 0)) {
+        continue;
+      }
+      else if (strcmp(info.message, ":open") == 0){
         continue;
       }
       else if ((strcmp(info.message, ":view") == 0) || (strcmp(info.message, ":v") == 0)) {

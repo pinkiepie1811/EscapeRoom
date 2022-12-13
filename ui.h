@@ -37,6 +37,11 @@ bool maze_running_check();
 bool door_running_check();
 
 /**
+ * 
+*/
+int box_running_check();
+
+/**
  * Run the main UI loop. This function will only return the UI is exiting.
  */
 void ui_run();
@@ -70,6 +75,8 @@ void ui_door();
  * 
  */
 void ui_paper();
+
+void ui_box(int player_id);
 
 /**
  * Stop the user interface and clean up.

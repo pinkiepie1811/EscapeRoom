@@ -15,6 +15,10 @@
 // The timeout for input
 #define INPUT_TIMEOUT_MS 10
 
+// Maze starting positions:
+#define start_x 3;
+#define start_y 0;
+
 // The ncurses forms code is loosely based on the first example at
 // http://tldp.org/HOWTO/NCURSES-Programming-HOWTO/forms.html
 
@@ -57,9 +61,11 @@ bool ui_running = false;
 
 // When true, the maze game should run
 bool maze_running = false;
+
 // Global variables to keep track of where the player in the maze is
-int maze_x = 3;
-int maze_y = 0;
+int maze_x = start_x;
+int maze_y = start_y;
+
 // Global maze
 char** maze;
 
@@ -70,14 +76,22 @@ int stored_player = -1;
 pthread_mutex_t maze_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t door_lock = PTHREAD_MUTEX_INITIALIZER;
 
-char** paper;
-
 // When true, the door game should run
 bool door_running = false;
-// Door stuff
+
+// Global variables for math game
+char** paper;
 char nums[4] = {'0', '0', '0', '0'};
 int curr_num = 0;
 char** door;
+
+// When true, box game should run;
+bool box_running_1 = false;
+bool box_running_2 = false;
+char** box1;
+char** box2;
+char* box_answer = NULL;
+pthread_mutex_t box_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // Error Protection for locking
 void Pthread_mutex_lock(pthread_mutex_t* mutex) {
@@ -118,6 +132,18 @@ bool door_running_check() {
   return door;
 } // door_running_check
 
+int box_running_check(){
+  int box;
+  // Make a copy of the boolean
+  // Lock to avoid race conditions
+  Pthread_mutex_lock(&box_lock);
+  if  (box_running_1 && box_running_2) box =  0;
+  else if (!box_running_1 && box_running_2) box = 1;
+  else if (box_running_1 && !box_running_2) box = 2;
+  else box = 3;
+  Pthread_mutex_unlock(&box_lock);
+  return box;
+}
 /**
  * Initialize the user interface and set up a callback function that should be
  * called every time there is a new message to send.
@@ -214,6 +240,8 @@ void ui_init(input_callback_t callback) {
   maze = read_game("maze.txt");
   door = read_game("door.txt");
   paper = read_game("paper.txt");
+  box1 = read_game("box1.txt");
+  box2 = read_game("box2.txt");
 
   // Running
   ui_running = true;
@@ -324,9 +352,12 @@ void ui_run() {
         char message[buffer_len + 1];
         memcpy(message, buffer, buffer_len);
         message[buffer_len] = '\0';
-
-        // Run the callback function provided to ui_init
-        input_callback(message);
+        
+        if (message[0] != '[' && message[buffer_len -1] != ']'){
+          // Run the callback function provided to ui_init
+          input_callback(message);
+        }
+        else box_answer = message;
 
         // Clear the input field, but only if the UI didn't exit
         if (ui_running) form_driver(input_form, REQ_CLR_FIELD);
@@ -476,7 +507,7 @@ void ui_maze(int player) {
 void ui_door() {
   stored_player = 2;
   
- // Set maze_running to true
+ // Set door_running to true
   Pthread_mutex_lock(&door_lock);
   door_running = true;
   Pthread_mutex_unlock(&door_lock);
@@ -494,7 +525,7 @@ void ui_door() {
   }
 
 if (ui_running) {
-    // Print the maze
+    // Print the door
     Pthread_mutex_lock(&ui_lock);
     form_driver(game_form, REQ_CLR_FIELD);
     
@@ -526,6 +557,56 @@ void ui_paper() {
         }
         form_driver(game_form, REQ_NEW_LINE);
     }
+    Pthread_mutex_unlock(&ui_lock);
+  }
+} // ui_paper
+
+void ui_box(int player_id){
+  Pthread_mutex_lock(&box_lock);
+  if (player_id == 1){
+    box_running_1 = true;
+  }
+  else box_running_2 = true;
+  Pthread_mutex_unlock(&box_lock);
+
+  char* solution_1 = "[pmosera]";
+  char* solution_2 = "[charliecurtsinger]";
+  
+
+  int solve = false;
+  if(box_answer != NULL){
+  if (player_id == 1 && strcmp(box_answer, solution_1) == 0){
+      solve = true;
+    }
+  else if (player_id == 2 && (strcmp(box_answer, solution_2) == 0))
+      solve = true;
+  }
+
+  if (solve){
+    if (player_id == 1){
+      Pthread_mutex_lock(&box_lock);
+      box_running_1 = false;
+      Pthread_mutex_unlock(&box_lock);
+    } else {
+      Pthread_mutex_lock(&box_lock);
+      box_running_2 = false;
+      Pthread_mutex_unlock(&box_lock);
+    }
+  }
+
+  if(ui_running){
+    Pthread_mutex_lock(&ui_lock);
+    form_driver(game_form, REQ_CLR_FIELD);
+    for (int y = 0; y < SIZE; y++) {
+        for (int x = 0; x < SIZE; x++){
+          if (player_id == 1)
+            form_driver(game_form, box1[y][x]);
+          else 
+            form_driver(game_form, box2[y][x]);
+        }
+        form_driver(game_form, REQ_NEW_LINE);
+    }
+    Pthread_mutex_unlock(&ui_lock);
   }
 } // ui_paper
 
@@ -562,8 +643,12 @@ void ui_exit() {
     free(maze[i]);
     free(door[i]);
     free(paper[i]);
+    free(box1[i]);
+    free(box2[i]);
   }
   free(maze);
   free(door);
   free(paper);
+  free(box1);
+  free(box2);
 } // ui_exit
