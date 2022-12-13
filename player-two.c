@@ -23,6 +23,19 @@ bool sent_message = false;
 bool maze_done;
 
 /**
+ * @brief TODO
+ * 
+ * @param args 
+ * @return void* 
+ */
+void* timer(void* args) {
+  while(1) {
+    ui_time();
+    sleep(1);
+  }
+}
+
+/**
  * Thread for pacing the narrative of the game and controlling the game play
  */
 void* narrate(void* args) {
@@ -55,6 +68,11 @@ void* narrate(void* args) {
       break;
     }
   }
+  pthread_t timer_thread;
+  if (pthread_create(&timer_thread, NULL, timer, NULL) != 0) {
+    perror("pthread_create failed");
+    exit(EXIT_FAILURE);
+  }
 
   // Start maze sequence
   ui_display("Narrator", "Other than the cracks and the door, the room you are in is empty, save for a strange lever almost directly in front of where you woke up.");
@@ -82,6 +100,8 @@ void* narrate(void* args) {
 
   message_info_t info = {"Data", "opened"};
   send_message(fd, info);
+
+  while(1);
   
   return NULL;
 } // narrate

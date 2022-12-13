@@ -22,6 +22,19 @@ bool sent_message = false;
 bool door_done = false;
 
 /**
+ * @brief TODO
+ * 
+ * @param args 
+ * @return void* 
+ */
+void* timer(void* args) {
+  while(1) {
+    ui_time();
+    sleep(1);
+  }
+}
+
+/**
  * Thread for pacing the narrative of the game and controlling the game play
  */
 void* narrate(void* args) {
@@ -54,7 +67,11 @@ void* narrate(void* args) {
       break;
     }
   }
-
+  pthread_t timer_thread;
+  if (pthread_create(&timer_thread, NULL, timer, NULL) != 0) {
+    perror("pthread_create failed");
+    exit(EXIT_FAILURE);
+  }
   // Start maze sequence
   ui_display("Narrator", "As you consider your situation, the cracks in the wall in front of you start to glow brighter, before they abruptly split apart into a pathway.");
   sleep(1);
@@ -90,6 +107,8 @@ void* narrate(void* args) {
   }
   ui_display("Narrator", "MONSTOR");
 
+  while(1);
+
   return NULL;
 } // narrate
 
@@ -115,6 +134,9 @@ void input_callback(const char* message) {
   }
   else if (strcmp(message, ":view") == 0 || strcmp(message, ":v") == 0) {
     ui_paper();
+  }
+  else if (strcmp(message, ":fight") == 0 || strcmp(message, ":f") == 0) {
+    ui_boss();
   }
   // Otherwise, display the message in the chat
   else { 

@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 
 // The height of the input field in the user interface
@@ -42,6 +43,12 @@ FIELD* input_fields[2];
 // The form that holds the input field
 FORM* input_form;
 
+// The fields array for the input form
+FIELD* time_fields[2];
+
+// The form that holds the input field
+FORM* time_form;
+
 // The handle for the UI thread
 pthread_t ui_thread;
 
@@ -58,8 +65,8 @@ bool ui_running = false;
 // When true, the maze game should run
 bool maze_running = false;
 // Global variables to keep track of where the player in the maze is
-int maze_x = 3;
-int maze_y = 0;
+int p_x = 3;
+int p_y = 0;
 // Global maze
 char** maze;
 
@@ -69,8 +76,10 @@ int stored_player = -1;
 // Lock for the maze_running boolean 
 pthread_mutex_t maze_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t door_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t boss_lock = PTHREAD_MUTEX_INITIALIZER;
 
 char** paper;
+char** boss;
 
 // When true, the door game should run
 bool door_running = false;
@@ -78,6 +87,10 @@ bool door_running = false;
 char nums[4] = {'0', '0', '0', '0'};
 int curr_num = 0;
 char** door;
+
+bool boss_running = false;
+
+clock_t start_time = 0;
 
 // Error Protection for locking
 void Pthread_mutex_lock(pthread_mutex_t* mutex) {
@@ -117,6 +130,15 @@ bool door_running_check() {
   Pthread_mutex_unlock(&door_lock);
   return door;
 } // door_running_check
+
+bool boss_running_check() {
+  // Make a copy of the boolean
+  // Lock to avoid race conditions
+  Pthread_mutex_lock(&boss_lock);
+  bool boss = boss_running;
+  Pthread_mutex_unlock(&boss_lock);
+  return boss;
+} // maze_running_check
 
 /**
  * Initialize the user interface and set up a callback function that should be
@@ -163,6 +185,10 @@ void ui_init(input_callback_t callback) {
   input_fields[0] = new_field(INPUT_HEIGHT, cols / 2, display_height + 1, cols / 2, 0, 0);
   input_fields[1] = NULL;
 
+  // Create the time field
+  time_fields[0] = new_field(INPUT_HEIGHT, cols / 2, display_height + 1, 0, 0, 0);
+  time_fields[1] = NULL;
+
   // Grow the display & narrative field buffers as needed
   field_opts_off(display_fields[0], O_STATIC);
   field_opts_off(narrative_fields[0], O_STATIC);
@@ -181,16 +207,18 @@ void ui_init(input_callback_t callback) {
   display_form = new_form(display_fields);
   input_form = new_form(input_fields);
   narrative_form = new_form(narrative_fields);
+  time_form = new_form(time_fields);
 
   // Display the forms
   post_form(game_form);
   post_form(display_form);
   post_form(input_form);
   post_form(narrative_form);
+  post_form(time_form);
   refresh();
 
   // Draw a horizontal split
-  for (int i = cols / 2; i < cols; i++) {
+  for (int i = 0; i < cols; i++) {
     mvprintw(display_height, i, "-");
   }
 
@@ -214,6 +242,7 @@ void ui_init(input_callback_t callback) {
   maze = read_game("maze.txt");
   door = read_game("door.txt");
   paper = read_game("paper.txt");
+  boss = read_game("boss.txt");
 
   // Running
   ui_running = true;
@@ -242,30 +271,35 @@ void ui_run() {
 
     } 
     // Case: If the input is arrow keys and the maze is running currently
-    else if (((ch == KEY_DOWN) || (ch == KEY_UP) || (ch == KEY_RIGHT) || (ch == KEY_LEFT)) && maze_running && stored_player == 1) {
+    else if (((ch == KEY_DOWN) || (ch == KEY_UP) || (ch == KEY_RIGHT) || (ch == KEY_LEFT)) && ((maze_running_check() && stored_player == 1) || boss_running_check())) {
       // Adjust the position of the player in the maze accordingly
       if (ch == KEY_RIGHT) {
-        maze_x++;
+        p_x++;
       } 
       else if (ch == KEY_LEFT) {
-        maze_x--;
+        p_x--;
       } 
       else if (ch == KEY_DOWN) {
-        maze_y++;
+        p_y++;
       } 
       else if (ch == KEY_UP) {
-        maze_y--;
+        p_y--;
       }
       // If the player is trying to move within the maze, clear the previous maze and print the new maze with
       // updated coordinates for the paper
-      if ((maze_x >= 0) && (maze_x < SIZE) && (maze_y >= 0) && (maze_y < SIZE)) {
+      if (maze_running_check()) {
+      if ((p_x >= 0) && (p_x < SIZE) && (p_y >= 0) && (p_y < SIZE)) {
         form_driver(game_form, REQ_CLR_FIELD);
         ui_maze(1);
       }
       // Otherwise, the player is out of bounds; keep them at the start
       else {
-        maze_x = 3;
-        maze_y = 0;
+        p_x = 3;
+        p_y = 0;
+      }
+      }
+      else if (boss_running_check()) {
+        ui_boss();
       }
     } 
     // Case: If the input is arrow keys and the door is running currently
@@ -403,6 +437,29 @@ void ui_display(const char* username, const char* message) {
   Pthread_mutex_unlock(&ui_lock);
 } // ui_display
 
+void ui_time() {
+  if (ui_running) {
+    Pthread_mutex_lock(&ui_lock);
+    form_driver(time_form, REQ_CLR_FIELD);
+    form_driver(time_form, REQ_NEW_LINE);
+    // for (int i = 0; i < time_form->cols/2; i++) {
+    //   form_driver(time_form, ' ');
+    // }
+    if (start_time == 0) {
+      start_time = clock();
+    }
+    long double time = 600 - ((clock() - start_time)/CLOCKS_PER_SEC);
+    int min = time / 60;
+    int sec = (long) time % 60;
+    char str[6];
+    sprintf(str, "%d:%d", min, sec);
+    for (int i = 0; i < 5; i++) {
+      form_driver(time_form, str[i]);
+    }
+    Pthread_mutex_unlock(&ui_lock);
+  }
+}
+
 /**
  * Run the maze in the UI
  * 
@@ -433,12 +490,12 @@ void ui_maze(int player) {
     // PLAYER ONE // 
     else if (player == 1) {
       // If the player hit a wall, set them back to the beginning
-      if (maze[maze_y][maze_x] == '*') {
-        maze_x = 3;
-        maze_y = 0;
+      if (maze[p_y][p_x] == '*') {
+        p_x = 3;
+        p_y = 0;
       }
       // If the player is at the end, the maze is not running
-      else if (maze[maze_y][maze_x] == 'E') {
+      else if (maze[p_y][p_x] == 'E') {
         Pthread_mutex_lock(&maze_lock);
         maze_running = false;
         Pthread_mutex_unlock(&maze_lock);
@@ -447,7 +504,7 @@ void ui_maze(int player) {
       for (int y = 0; y < SIZE; y++) {
         for (int x = 0; x < SIZE; x++) {
           // Print the player
-          if (y == maze_y && x == maze_x) {
+          if (y == p_y && x == p_x) {
             form_driver(game_form, '@');
           }
           // Display the vertical border
@@ -526,8 +583,51 @@ void ui_paper() {
         }
         form_driver(game_form, REQ_NEW_LINE);
     }
+    Pthread_mutex_unlock(&ui_lock);
   }
 } // ui_paper
+
+// track health in global
+// move octopus up as damage (move octopus in array + insert blank lines)
+// implement player 2
+// implement octopus attack
+void ui_boss() {
+  if (!boss_running) {
+    p_x = 10;
+    p_y = 18;
+  }
+  Pthread_mutex_lock(&boss_lock);
+  boss_running = true;
+  Pthread_mutex_unlock(&boss_lock);
+
+  if (ui_running) {
+    Pthread_mutex_lock(&ui_lock);
+
+    form_driver(game_form, REQ_CLR_FIELD);
+
+    if (boss[p_y][p_x] == '|') {
+        p_x = 10;
+        p_y = 18;
+    }
+    else if (boss[p_y][p_x] == '*') {
+        p_x = 10;
+        p_y = 18;
+      }
+    for (int y = 0; y < SIZE; y++) {
+        for (int x = 0; x < SIZE; x++){
+          if (y == p_y && x == p_x) {
+            form_driver(game_form, stored_player + '0');
+          }
+          else {
+            form_driver(game_form, boss[y][x]);
+          }
+        }
+        form_driver(game_form, REQ_NEW_LINE);
+    }
+
+    Pthread_mutex_unlock(&ui_lock);
+  }
+}
 
 /**
  * Stop the user interface and clean up.
@@ -562,8 +662,10 @@ void ui_exit() {
     free(maze[i]);
     free(door[i]);
     free(paper[i]);
+    free(boss[i]);
   }
   free(maze);
   free(door);
   free(paper);
+  free(boss);
 } // ui_exit

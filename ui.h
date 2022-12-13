@@ -64,12 +64,22 @@ void ui_maze(int player);
  * TODO
  */
 void ui_door();
+/** 
+ * TODO
+ */
+void ui_boss();
 
 /**
  * TODO
  * 
  */
 void ui_paper();
+
+/**
+ * TODO
+ * 
+ */
+void ui_time();
 
 /**
  * Stop the user interface and clean up.
