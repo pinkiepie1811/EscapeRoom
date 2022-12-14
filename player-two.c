@@ -9,6 +9,14 @@
 #include "socket.h"
 #include "ui.h"
 
+// timer end
+// win against octopus
+// fix maze solution
+// fix math solution
+// integrate anagram
+// message when attack
+// increase attacks to 10
+
 // The socket to send and receive messages across to and from Player Two
 // Initialize to -1 so we know not to send messages until we are connected to Player Two
 int fd = -1;
@@ -35,31 +43,59 @@ void* timer(void* args) {
   }
 }
 
+void* boss_attack_func(void* args) {
+  while(boss_running_check()) {
+    message_info_t info;
+    char mess[10];
+
+    info.username = "dam";
+    sprintf(mess, "%d", change_damage());
+    info.message = mess;
+    send_message(fd, info);
+
+    info.username = "posx";
+    sprintf(mess, "%d", get_pos_x());
+    info.message = mess;
+    send_message(fd, info);
+
+    info.username = "posy";
+    sprintf(mess, "%d", get_pos_y());
+    info.message = mess;
+    send_message(fd, info);
+
+    boss_attack();
+    ui_boss();
+
+    usleep(1000 * 500);
+  }
+  return NULL;
+}
+
 /**
  * Thread for pacing the narrative of the game and controlling the game play
  */
 void* narrate(void* args) {
   // Introduction sequence
   ui_display("Narrator","You wake up.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","Taking a look around, you see you are trapped in a stone chamber with a large padlocked door to the side.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","You need to escape before it is too late!");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","Your phone starts to buzz in your pocket, but when you check it out, it has no signal.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor?");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","You try typing something in. What's this?");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","It seems someone else is on the other end of this line- maybe they are stuck too.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","Try sending a message to each other now!");
 
   // Wait for players to try the chat
@@ -76,7 +112,7 @@ void* narrate(void* args) {
 
   // Start maze sequence
   ui_display("Narrator", "Other than the cracks and the door, the room you are in is empty, save for a strange lever almost directly in front of where you woke up.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator", "Pull the lever [type :pull]");
 
   while (1) {
@@ -100,6 +136,28 @@ void* narrate(void* args) {
 
   message_info_t info = {"Data", "opened"};
   send_message(fd, info);
+
+  ui_display("Narrator", "The door opens into a giant cavern!");
+  sleep(0);
+
+  ui_display("Narrator", "It looks like theres an.... octopus? in the cavern with you! Its shooting lazers!");
+  sleep(0);
+  ui_display("Narrator", "[Type :fight to start combat]");
+  while (1) {
+    if (boss_running_check()) {
+      break;
+    }
+  }
+  sleep(0);
+  ui_display("Narrator", "You see someone- maybe its your friend the TO DO [Use arrow keys to move and avoid attacks");
+  sleep(0);
+  ui_display("Narrator", "[Touch the monster to do damage]");
+  sleep(0);
+  pthread_t boss_attack_thread;
+  if (pthread_create(&boss_attack_thread, NULL, boss_attack_func, NULL) != 0) {
+    perror("pthread_create failed");
+    exit(EXIT_FAILURE);
+  }
 
   while(1);
   
@@ -129,11 +187,14 @@ void input_callback(const char* message) {
   // Message ':door' calls the door (display door with lock)
   else if (strcmp(message, ":door") == 0 || strcmp(message, ":d") == 0) {
     if (!door_running_check()) {
-      ui_door(1);
+      ui_door();
     }
     else {
       ui_display("Narrator", "You are already at the door.");
     }
+  }
+  else if (strcmp(message, ":fight") == 0 || strcmp(message, ":f") == 0) {
+    ui_boss(10, 18);
   }
   // Otherwise, display the message in the chat
   else { 
@@ -187,6 +248,22 @@ void* player_one_receive(void* args) {
       // We received data from Player One
       else if (strcmp(info.username, "Data") == 0) {
         if (strcmp(info.message, "escaped") == 0) maze_done = true;
+        continue;
+      }
+      // We received data from Player One
+      else if (strcmp(info.username, "dam") == 0) {
+        int damage = atoi(info.message);
+        do_damage(damage);
+        continue;
+      }
+      else if (strcmp(info.username, "posx") == 0) {
+        int x = atoi(info.message);
+        change_p2_posx(x);
+        continue;
+      }
+      else if (strcmp(info.username, "posy") == 0) {
+        int y = atoi(info.message);
+        change_p2_posy(y);
         continue;
       }
 

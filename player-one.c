@@ -34,31 +34,59 @@ void* timer(void* args) {
   }
 }
 
+void* boss_attack_func(void* args) {
+  while(boss_running_check()) {
+    message_info_t info;
+    char mess[10];
+
+    info.username = "dam";
+    sprintf(mess, "%d", change_damage());
+    info.message = mess;
+    send_message(fd, info);
+
+    info.username = "posx";
+    sprintf(mess, "%d", get_pos_x());
+    info.message = mess;
+    send_message(fd, info);
+
+    info.username = "posy";
+    sprintf(mess, "%d", get_pos_y());
+    info.message = mess;
+    send_message(fd, info);
+
+    boss_attack();
+    ui_boss();
+
+    usleep(1000 * 500);
+  }
+  return NULL;
+}
+
 /**
  * Thread for pacing the narrative of the game and controlling the game play
  */
 void* narrate(void* args) {
   // Introduction sequence
   ui_display("Narrator","You wake up.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","Taking a look around, you see you are trapped in a stone chamber.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","You need to escape before it is too late!");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","Your phone starts to buzz in your pocket, but when you check it out, it has no signal.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor?");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","You try typing something in. What's this?");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","It seems someone else is on the other end of this line- maybe they are stuck too.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator","Try sending a message to each other now!");
 
   // Wait for players to try the chat
@@ -74,13 +102,13 @@ void* narrate(void* args) {
   }
   // Start maze sequence
   ui_display("Narrator", "As you consider your situation, the cracks in the wall in front of you start to glow brighter, before they abruptly split apart into a pathway.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator", "You poke your head in, and realize you there looks to be a set of tunnels ahead.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator", "However, the glow in the walls is limited to your room- if you step in you will be walking in the dark."); 
-  sleep(1);
+  sleep(0);
   ui_display("Narrator", "Still, you have little other choice.");
-  sleep(1);
+  sleep(0);
   ui_display("Narrator", "[Type :enter to enter the darkness. Use your arrow keys to navigate.]");
   
   // Wait for maze to start
@@ -92,20 +120,40 @@ void* narrate(void* args) {
    if(!maze_running_check()) break;
   }
   ui_display("Narrator", "Congrats! You made it through the maze! You step out of the darkness to a large cavern.");
-  sleep(1);
+  sleep(0);
 
   message_info_t info = {"Data", "escaped"};
   send_message(fd, info);
 
   ui_display("Narrator", "You see a piece of paper. [Type :view to look at the paper");
-  sleep(1);
+  sleep(0);
 
   while (1) {
     if (door_done) {
       break;
     }
   }
-  ui_display("Narrator", "MONSTOR");
+  ui_display("Narrator", "The walls shake and fall away- you are in a giant cavern!");
+  sleep(0);
+
+  ui_display("Narrator", "It looks like theres an.... octopus? in the cavern with you! Its shooting lazers!");
+  sleep(0);
+  ui_display("Narrator", "[Type :fight to start combat]");
+  while (1) {
+    if (boss_running_check()) {
+      break;
+    }
+  }
+  sleep(0);
+  ui_display("Narrator", "You see someone- maybe its your friend the TO DO [Use arrow keys to move and avoid attacks");
+  sleep(0);
+  ui_display("Narrator", "[Touch the monster to do damage]");
+  sleep(0);
+  pthread_t boss_attack_thread;
+  if (pthread_create(&boss_attack_thread, NULL, boss_attack_func, NULL) != 0) {
+    perror("pthread_create failed");
+    exit(EXIT_FAILURE);
+  }
 
   while(1);
 
@@ -136,7 +184,7 @@ void input_callback(const char* message) {
     ui_paper();
   }
   else if (strcmp(message, ":fight") == 0 || strcmp(message, ":f") == 0) {
-    ui_boss();
+    ui_boss(10, 18);
   }
   // Otherwise, display the message in the chat
   else { 
@@ -189,6 +237,23 @@ void* player_two_receive(void* arg) {
       // We received data from Player One
       else if (strcmp(info.username, "Data") == 0) {
         if (strcmp(info.message, "opened") == 0) door_done = true;
+        continue;
+      }
+
+      // We received data from Player One
+      else if (strcmp(info.username, "dam") == 0) {
+        int damage = atoi(info.message);
+        do_damage(damage);
+        continue;
+      }
+      else if (strcmp(info.username, "posx") == 0) {
+        int x = atoi(info.message);
+        change_p2_posx(x);
+        continue;
+      }
+      else if (strcmp(info.username, "posy") == 0) {
+        int y = atoi(info.message);
+        change_p2_posy(y);
         continue;
       }
 
