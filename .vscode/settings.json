@@ -12,6 +12,7 @@
         "ui.h": "c",
         "stdio.h": "c",
         "stdbool.h": "c",
-        "form.h": "c"
+        "form.h": "c",
+        "message.h": "c"
     }
 }

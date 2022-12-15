@@ -64,6 +64,13 @@ void* boss_attack_func(void* args) {
 
     usleep(1000 * 500);
   }
+  message_info_t last;
+    char mess[10];
+
+    last.username = "dam";
+    sprintf(mess, "%d", change_damage());
+    last.message = mess;
+    send_message(fd, last);
   return NULL;
 }
 
@@ -261,6 +268,9 @@ void* player_two_receive(void* arg) {
         ui_display("WARNING", "PLAYER 2 HAS QUIT");
         break;
       }
+      else if (strcmp(info.message, ":exit") == 0) {
+        break;
+      }
       // Don't display the message if Player Two is trying to start the maze
       if ((strcmp(info.message, ":pull") == 0)) {
         continue;
@@ -276,7 +286,7 @@ void* player_two_receive(void* arg) {
       else if (strcmp(info.username, "Data") == 0) {
         if (strcmp(info.message, "opened") == 0) door_done = true;
         else if (strcmp(info.message, "solved_two") == 0) box2_done = true;
-        else if ((strcmp(info.message, "time") == 0) || (strcmp(info.message, ":exit") == 0)) break;
+        else if (strcmp(info.message, "time") == 0) break;
         continue;
       }
 
@@ -284,6 +294,7 @@ void* player_two_receive(void* arg) {
       else if (strcmp(info.username, "dam") == 0) {
         int damage = atoi(info.message);
         do_damage(damage);
+        if (damage != 0) ui_display("Narrator", "Your friend attacked the octopus!");
         continue;
       }
       else if (strcmp(info.username, "posx") == 0) {

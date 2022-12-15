@@ -25,7 +25,7 @@
 #define START_X_BOSS 10
 #define START_Y_BOSS 18
 
-#define NUM_ATTACKS 7
+#define NUM_ATTACKS 10
 
 // The ncurses forms code is loosely based on the first example at
 // http://tldp.org/HOWTO/NCURSES-Programming-HOWTO/forms.html
@@ -139,7 +139,10 @@ int attacks[NUM_ATTACKS][2] = { {3, 7},
                                 {4, 17},
                                 {9, 16},
                                 {12, 7},
-                                {12, 12}
+                                {12, 12},
+                                {1, 4},
+                                {10,8},
+                                {10,12}
                                 };
 
 // Position of other player
@@ -669,7 +672,7 @@ void ui_door() {
   door_running = true;
   Pthread_mutex_unlock(&door_lock);
   // CHANGE
-  char solution[4] = {'1', '1', '1','1'};
+  char solution[4] = {'0', '5', '4','2'};
 
   int solved = true;
     for (int i = 0; i < 4; i++) {
@@ -818,25 +821,21 @@ void boss_attack(){
       Pthread_mutex_lock(&boss_attack_lock);
       attacks[i][1]++;
       if (attacks[i][1] > 18) {
-        attacks[i][0] = rand() % 18 + 1;
+        attacks[i][0] = (rand() % 18) + 1;
          attacks[i][1] = 7;
       }
       Pthread_mutex_unlock(&boss_attack_lock);
     }
 }
 
-// track health in global
-// move octopus up as damage (move octopus in array + insert blank lines)
-// implement player 2
-// implement octopus attack
 void ui_boss() {
-  if (!boss_running) {
+  if (!boss_running_check()) {
     player_x = START_X_BOSS;
     player_y = START_Y_BOSS;
+    Pthread_mutex_lock(&boss_lock);
+    boss_running = true;
+    Pthread_mutex_unlock(&boss_lock);
   }
-  Pthread_mutex_lock(&boss_lock);
-  boss_running = true;
-  Pthread_mutex_unlock(&boss_lock);
 
   if (ui_running) {
     Pthread_mutex_lock(&ui_lock);
@@ -862,6 +861,7 @@ void ui_boss() {
       monster_health--;
       health_change++;
       Pthread_mutex_unlock(&boss_health_lock);
+      ui_display("Narrator", "You attacked the monster! He throws you backwards!");
       player_y = START_Y_BOSS;
     }
     for (int y = 0; y < SIZE; y++) {
