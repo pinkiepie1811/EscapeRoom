@@ -9,11 +9,8 @@
 #include "socket.h"
 #include "ui.h"
 
-// timer end
-// win against octopus
 // fix maze solution
 // fix math solution
-// integrate anagram
 // message when attack
 // increase attacks to 10
 
@@ -39,10 +36,14 @@ bool box1_done = false;
  * @return void* 
  */
 void* timer(void* args) {
-  while(1) {
-    ui_time();
+  while(ui_time() != -1) {   
     sleep(1);
   }
+  message_info_t info = {"Data", "time"};
+  send_message(fd, info);
+  ui_exit();
+  printf("\nYou're too late! Your time has run out. The ceiling has collapsed on you and your friend. The end.\n\n");
+  return NULL;
 }
 
 void* boss_attack_func(void* args) {
@@ -175,7 +176,16 @@ void* narrate(void* args) {
     exit(EXIT_FAILURE);
   }
 
-  while(1);
+  // Wait for door to finish
+  while(1) {
+   if(!boss_running_check()) break;
+  }
+
+  ui_display("Narrator", "The octopus dissolves into the floor!");
+  sleep(2);
+  ui_display("Narrator", "The open sky lies beyond. Enter [:exit] to escape to freedom!");
+  sleep(2);
+
   
   return NULL;
 } // narrate
@@ -187,7 +197,7 @@ void* narrate(void* args) {
  */
 void input_callback(const char* message) {
   // Quitting mechanismƒ
-  if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0) {
+  if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0 || strcmp(message, ":exit") == 0) {
     ui_exit();
   }
   // Message ':pull' calls the maze game 
@@ -278,6 +288,7 @@ void* player_one_receive(void* args) {
       else if (strcmp(info.username, "Data") == 0) {
         if (strcmp(info.message, "escaped") == 0) maze_done = true;
         else if (strcmp(info.message, "solved_one") == 0) box1_done = true;
+        else if ((strcmp(info.message, "time") == 0) || (strcmp(info.message, ":exit") == 0)) break;
         continue;
       }
 
@@ -302,11 +313,6 @@ void* player_one_receive(void* args) {
       // We have now received a message; set bool to to true
       received_message = true;
 
-      /**
-       * if (username = username) uidisplay
-       * if username = damage) total_damage+=atoi(message) damage
-       * if username = maze_solved if message = "true" maze
-       */
       // Print the message otherwise
       ui_display(info.username, info.message);
       // Free the message information

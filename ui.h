@@ -67,7 +67,7 @@ void ui_run();
  * Keeps track of the timer telling the players how much longer they
  * have to escape. 
  */
-void ui_time();
+int ui_time();
 
 /**
  * Run the maze in the UI.

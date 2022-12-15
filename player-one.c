@@ -29,10 +29,14 @@ bool box2_done = false;
  * @return void* 
  */
 void* timer(void* args) {
-  while(1) {
-    ui_time();
+  while(ui_time() != -1) {   
     sleep(1);
   }
+  message_info_t info = {"Data", "time"};
+  send_message(fd, info);
+  ui_exit();
+  printf("\nYou're too late! Your time has run out. The ceiling has collapsed on you and your friend. The end.\n\n");
+  return NULL;
 }
 
 void* boss_attack_func(void* args) {
@@ -169,7 +173,13 @@ void* narrate(void* args) {
     exit(EXIT_FAILURE);
   }
 
-  while(1);
+  while(1) {
+   if(!boss_running_check()) break;
+  }
+
+  ui_display("Narrator", "The octopus dissolves into the floor!");
+  ui_display("Narrator", "The open sky lies beyond. Enter [:exit] to escape to freedom!");
+
 
   return NULL;
 } // narrate
@@ -181,7 +191,7 @@ void* narrate(void* args) {
  */
 void input_callback(const char* message) {
   // Quitting mechanism
-  if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0) {
+  if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0 || strcmp(message, ":exit") == 0) {
     ui_exit();
   }
   // Message of ':enter' calls the maze game 
@@ -266,6 +276,7 @@ void* player_two_receive(void* arg) {
       else if (strcmp(info.username, "Data") == 0) {
         if (strcmp(info.message, "opened") == 0) door_done = true;
         else if (strcmp(info.message, "solved_two") == 0) box2_done = true;
+        else if ((strcmp(info.message, "time") == 0) || (strcmp(info.message, ":exit") == 0)) break;
         continue;
       }
 

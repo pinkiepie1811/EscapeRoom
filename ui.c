@@ -20,7 +20,7 @@
 #define START_Y 0;
 
 // Time for players to escape in seconds
-#define TIME_LIMIT 600
+#define TIME_LIMIT 360
 
 #define START_X_BOSS 10
 #define START_Y_BOSS 18
@@ -549,7 +549,7 @@ void ui_display(const char* username, const char* message) {
  * Keeps track of the timer telling the players how much longer they
  * have to escape. 
  */
-void ui_time() {
+int ui_time() {
   // Only start the timer is the UI is running
   if (ui_running) {
 
@@ -582,7 +582,11 @@ void ui_time() {
 
     // Unlock the UI
     Pthread_mutex_unlock(&ui_lock);
+    if (time <= 0) {
+      return -1;
+    }
   }
+  return 1;
 } // ui_time
 
 /**
