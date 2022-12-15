@@ -548,6 +548,11 @@ void ui_display(const char* username, const char* message) {
   Pthread_mutex_unlock(&ui_lock);
 } // ui_display
 
+void narrate_display(const char* message) {
+  ui_display("Narrator",message);
+  sleep(3);
+}
+
 /**
  * Keeps track of the timer telling the players how much longer they
  * have to escape. 
