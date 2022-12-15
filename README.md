@@ -8,6 +8,12 @@ COVID-19 without severe health risks. Hence, we strive to make one aspect of ent
 that was at first almost exclusively only accessible in person, attainable for all. Namely, we will
 be creating a virtual escape room. 
 
-## Implementation/Program Description [will be added later]
+## How to play
+After compiling the program using the provided Makefile, the first player can start the game using `./player-one`. After that, the second player can connect to the port that player one is listening to (which will be displayed in the UI of player one). Upon sucessful connections, players proceed by the instructions prompted in the game.
 
-## maze.txt is the text file that contains our maze. We read in the file to generate the maze in the game. 
+### How the program work:
+
+
+
+## Notes
+An important rule of this game is that players would strictly follow the instructions given by the narrator of the game, especially when giving commands (inputs starting with `:`). Breaking this rule can have unexpected outcomes, and players might never be able to escape the dangerous room!!!!
