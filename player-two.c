@@ -22,6 +22,8 @@ bool sent_message = false;
 // Boolean that tells us if Player One has made it through the maze
 bool maze_done;
 
+bool box1_done = false;
+
 /**
  * Thread for pacing the narrative of the game and controlling the game play
  */
@@ -83,23 +85,35 @@ void* narrate(void* args) {
   message_info_t info = {"Data", "opened"};
   send_message(fd, info);
 
-  //Anagram game
+ 
+   //Anagram game
   ui_display("Narrator", "Another emtpy room!");
   ui_display("Narrator", "But wait!! There is a small box in the corner. Let's see what's inside. [type :open]");
 
   while(1){
-    if(box_running_check() == 0 || box_running_check() == 1) break;
+    if(box_running_check()) break;
   }
 
   ui_display("Narrator", "These words do not make much sense, but it seems like the letters can be moved around.");
   sleep(2);
   ui_display("Narrator", "Enter '[correct sequence]' to rearrange these words");
 
+ 
+  // Wait for box to finish
+  while(1) {
+   if(!box_running_check()) break;
+  }
+
+  message_info_t box_info = {"Data", "solved_two"};
+  send_message(fd, box_info);
+
+  if (box1_done == false){
+      ui_display("Narrator", "Your friend seems to be struggling. Communicate and help them!");
+      sleep(10);
+  }
+
   while(1){
-    if (box_running_check() == 2){
-      ui_display("Narrator", "It seems like your partner is struggling. Communicate and help them.");
-    }
-    if (box_running_check() == 3) break;
+    if(box1_done) break;
   }
 
   ui_display("Narrator", "Congratulations! Both of you have cracked the code!!.. (room vibrating, werid noise,...) Now.. you Computer Scientists should prepare yourself for SEGFAULT blah blah blah.");
@@ -139,7 +153,7 @@ void input_callback(const char* message) {
 
     // Message ':open' calls the box 
   else if (strcmp(message, ":open") == 0 || strcmp(message, ":o") == 0) {
-    if (box_running_check() == 2 || box_running_check() == 3) {
+    if (!box_running_check()) {
       ui_box(2);
     }
     else {
@@ -202,6 +216,7 @@ void* player_one_receive(void* args) {
       // We received data from Player One
       else if (strcmp(info.username, "Data") == 0) {
         if (strcmp(info.message, "escaped") == 0) maze_done = true;
+         else if (strcmp(info.message, "solved_one") == 0) box1_done = true;
         continue;
       }
 

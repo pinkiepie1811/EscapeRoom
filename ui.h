@@ -39,7 +39,7 @@ bool door_running_check();
 /**
  * 
 */
-int box_running_check();
+bool box_running_check();
 
 /**
  * Run the main UI loop. This function will only return the UI is exiting.

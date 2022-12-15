@@ -20,6 +20,7 @@ bool received_message = false;
 bool sent_message = false;
 
 bool door_done = false;
+bool box2_done = false;
 
 /**
  * Thread for pacing the narrative of the game and controlling the game play
@@ -77,8 +78,8 @@ void* narrate(void* args) {
   ui_display("Narrator", "Congrats! You made it through the maze! You step out of the darkness to a large cavern.");
   sleep(1);
 
-  message_info_t info = {"Data", "escaped"};
-  send_message(fd, info);
+  message_info_t maze_info = {"Data", "escaped"};
+  send_message(fd, maze_info);
 
   ui_display("Narrator", "You see a piece of paper. [Type :view to look at the paper");
   sleep(1);
@@ -94,19 +95,28 @@ void* narrate(void* args) {
   ui_display("Narrator", "But wait!! There is a small box in the corner. Let's see what's inside. [type :open]");
 
   while(1){
-    if(box_running_check() == 0 || box_running_check() == 2) break;
+    if(box_running_check()) break;
   }
 
   ui_display("Narrator", "These words do not make much sense, but it seems like the letters can be moved around.");
   sleep(2);
   ui_display("Narrator", "Enter '[correct sequence]' to rearrange these words");
 
+  // Wait for box to finish
+  while(1) {
+   if(!box_running_check()) break;
+  }
+
+  message_info_t box_info = {"Data", "solved_one"};
+  send_message(fd, box_info);
+
+  if (box2_done == false){
+      ui_display("Narrator", "Your friend seems to be struggling. Communicate and help them!");
+      sleep(10);
+  }
 
   while(1){
-    if (box_running_check() == 1){
-      ui_display("Narrator", "It seems like your partner is struggling. Communicate and help them.");
-    }
-    if (box_running_check() == 3) break;
+    if(box2_done) break;
   }
 
   ui_display("Narrator", "Congratulations! Both of you have cracked the code!!.. (room vibrating, werid noise,...) Now.. you Computer Scientists should prepare yourself for SEGFAULT blah blah blah.");
@@ -140,15 +150,16 @@ void input_callback(const char* message) {
     ui_paper();
   }
 
-     // Message ':open' calls the box 
+    // Message ':open' calls the box 
   else if (strcmp(message, ":open") == 0 || strcmp(message, ":o") == 0) {
-    if (box_running_check() == 1 || box_running_check() == 3) {
+    if (!box_running_check()) {
       ui_box(1);
     }
     else {
       ui_display("Narrator", "You have already opened this box");
     }
-  }  
+  }
+  
 
   // Otherwise, display the message in the chat
   else { 
@@ -204,6 +215,7 @@ void* player_two_receive(void* arg) {
       // We received data from Player Two
       else if (strcmp(info.username, "Data") == 0) {
         if (strcmp(info.message, "opened") == 0) door_done = true;
+        else if (strcmp(info.message, "solved_two") == 0) box2_done = true;
         continue;
       }
 

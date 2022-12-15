@@ -86,11 +86,11 @@ int curr_num = 0;
 char** door;
 
 // When true, box game should run;
-bool box_running_1 = false;
-bool box_running_2 = false;
+bool box_running = false;
 char** box1;
 char** box2;
-char* box_answer = NULL;
+char* box_answer;
+int box_player_id;
 pthread_mutex_t box_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // Error Protection for locking
@@ -132,15 +132,12 @@ bool door_running_check() {
   return door;
 } // door_running_check
 
-int box_running_check(){
-  int box;
+bool box_running_check(){
+  bool box;
   // Make a copy of the boolean
   // Lock to avoid race conditions
   Pthread_mutex_lock(&box_lock);
-  if  (box_running_1 && box_running_2) box =  0;
-  else if (!box_running_1 && box_running_2) box = 1;
-  else if (box_running_1 && !box_running_2) box = 2;
-  else box = 3;
+  box = box_running;
   Pthread_mutex_unlock(&box_lock);
   return box;
 }
@@ -353,11 +350,15 @@ void ui_run() {
         memcpy(message, buffer, buffer_len);
         message[buffer_len] = '\0';
         
-        if (message[0] != '[' && message[buffer_len -1] != ']'){
-          // Run the callback function provided to ui_init
+        if (message[0] == '[' && message[buffer_len -1] == ']'){
+          box_answer = (char*)malloc(buffer_len+1);
+          strncpy(box_answer, message, buffer_len+1);
+          ui_box(box_player_id);
+        }
+        else {
+           // Run the callback function provided to ui_init
           input_callback(message);
         }
-        else box_answer = message;
 
         // Clear the input field, but only if the UI didn't exit
         if (ui_running) form_driver(input_form, REQ_CLR_FIELD);
@@ -562,18 +563,15 @@ void ui_paper() {
 } // ui_paper
 
 void ui_box(int player_id){
+  box_player_id = player_id;
   Pthread_mutex_lock(&box_lock);
-  if (player_id == 1){
-    box_running_1 = true;
-  }
-  else box_running_2 = true;
+  box_running = true;
   Pthread_mutex_unlock(&box_lock);
 
   char* solution_1 = "[pmosera]";
   char* solution_2 = "[charliecurtsinger]";
   
-
-  int solve = false;
+  bool solve = false;
   if(box_answer != NULL){
   if (player_id == 1 && strcmp(box_answer, solution_1) == 0){
       solve = true;
@@ -583,15 +581,9 @@ void ui_box(int player_id){
   }
 
   if (solve){
-    if (player_id == 1){
       Pthread_mutex_lock(&box_lock);
-      box_running_1 = false;
+      box_running = false;
       Pthread_mutex_unlock(&box_lock);
-    } else {
-      Pthread_mutex_lock(&box_lock);
-      box_running_2 = false;
-      Pthread_mutex_unlock(&box_lock);
-    }
   }
 
   if(ui_running){
@@ -608,7 +600,7 @@ void ui_box(int player_id){
     }
     Pthread_mutex_unlock(&ui_lock);
   }
-} // ui_paper
+} // ui_box
 
 /**
  * Stop the user interface and clean up.
