@@ -9,7 +9,7 @@ that was at first almost exclusively only accessible in person, attainable for a
 be creating a virtual escape room. 
 
 ## How to play
-After compiling the program using the provided Makefile, the first player can start the game using `./player-one`. After that, the second player can connect to the port that player one is listening to (which will be displayed in the UI of player one). Upon sucessful connections, players proceed by the instructions prompted in the game.
+After compiling the program using the provided Makefile, the first player can start the game using `./player-one`. After that, the second player can connect to the port that player one is listening to (which will be displayed in the UI of player one) with `./player-two <server name> <port>`. Upon sucessful connections, players proceed by the instructions prompted in the game.
 
 ### How the program work:
 
