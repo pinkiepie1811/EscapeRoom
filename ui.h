@@ -23,6 +23,30 @@ typedef void (*input_callback_t)(const char*);
 void ui_init(input_callback_t callback);
 
 /**
+ * Returns the boolean for the maze_running
+ * 
+ * \return true or false depending on if the maze is currently running
+ */
+bool maze_running_check();
+
+/**
+ * Returns the boolean for the door_running
+ * 
+ * \return true or false depending on if the door is currently running
+ */
+bool door_running_check();
+
+/**
+ * 
+*/
+bool box_running_check();
+
+/**
+ * Run the main UI loop. This function will only return the UI is exiting.
+ */
+void ui_run();
+
+/**
  * Add a new message to the user interface's display pane.
  *
  * \param username  The username that should appear before the message. The UI
@@ -77,6 +101,8 @@ bool door_running_check();
  * Called by Player One.
  */
 void ui_paper();
+
+void ui_box(int player_id);
 
 /**
  * @brief TODO

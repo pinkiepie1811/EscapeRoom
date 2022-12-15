@@ -30,6 +30,8 @@ bool sent_message = false;
 // Boolean that tells us if Player One has made it through the maze
 bool maze_done;
 
+bool box1_done = false;
+
 /**
  * @brief TODO
  * 
@@ -77,25 +79,15 @@ void* boss_attack_func(void* args) {
 void* narrate(void* args) {
   // Introduction sequence
   ui_display("Narrator","You wake up.");
-  sleep(0);
   ui_display("Narrator","Taking a look around, you see you are trapped in a stone chamber with a large padlocked door to the side.");
-  sleep(0);
   ui_display("Narrator","You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.");
-  sleep(0);
   ui_display("Narrator","Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond.");
-  sleep(0);
   ui_display("Narrator","You need to escape before it is too late!");
-  sleep(0);
   ui_display("Narrator","Your phone starts to buzz in your pocket, but when you check it out, it has no signal.");
-  sleep(0);
   ui_display("Narrator","Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor?");
-  sleep(0);
   ui_display("Narrator","You try typing something in. What's this?");
-  sleep(0);
   ui_display("Narrator","It seems someone else is on the other end of this line- maybe they are stuck too.");
-  sleep(0);
   ui_display("Narrator","Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
-  sleep(0);
   ui_display("Narrator","Try sending a message to each other now!");
 
   // Wait for players to try the chat
@@ -112,7 +104,6 @@ void* narrate(void* args) {
 
   // Start maze sequence
   ui_display("Narrator", "Other than the cracks and the door, the room you are in is empty, save for a strange lever almost directly in front of where you woke up.");
-  sleep(0);
   ui_display("Narrator", "Pull the lever [type :pull]");
 
   while (1) {
@@ -138,21 +129,46 @@ void* narrate(void* args) {
   send_message(fd, info);
 
   ui_display("Narrator", "The door opens into a giant cavern!");
-  sleep(0);
+
+    //Anagram game
+  ui_display("Narrator", "Another emtpy room!");
+  ui_display("Narrator", "But wait!! There is a small box in the corner. Let's see what's inside. [type :open]");
+
+  while(1){
+    if(box_running_check()) break;
+  }
+
+  ui_display("Narrator", "These words do not make much sense, but it seems like the letters can be moved around.");
+  sleep(2);
+  ui_display("Narrator", "Enter '[correct sequence]' to rearrange these words");
+
+  // Wait for box to finish
+  while(1) {
+   if(!box_running_check()) break;
+  }
+
+  message_info_t box_info = {"Data", "solved_two"};
+  send_message(fd, box_info);
+
+  if (box1_done == false){
+      ui_display("Narrator", "Your friend seems to be struggling. Communicate and help them!");
+  }
+
+  while(1){
+    if(box1_done) break;
+  }
+
+  ui_display("Narrator", "Congratulations! Both of you have cracked the code!!");
 
   ui_display("Narrator", "It looks like theres an.... octopus? in the cavern with you! Its shooting lazers!");
-  sleep(0);
   ui_display("Narrator", "[Type :fight to start combat]");
   while (1) {
     if (boss_running_check()) {
       break;
     }
   }
-  sleep(0);
   ui_display("Narrator", "You see someone- maybe its your friend the TO DO [Use arrow keys to move and avoid attacks");
-  sleep(0);
   ui_display("Narrator", "[Touch the monster to do damage]");
-  sleep(0);
   pthread_t boss_attack_thread;
   if (pthread_create(&boss_attack_thread, NULL, boss_attack_func, NULL) != 0) {
     perror("pthread_create failed");
@@ -170,13 +186,12 @@ void* narrate(void* args) {
  * \param message  The string holding the message that Player Two wants to send to Player One
  */
 void input_callback(const char* message) {
-  // Quitting mechanism
+  // Quitting mechanismƒ
   if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0) {
     ui_exit();
   }
   // Message ':pull' calls the maze game 
-  // FIX: GET RID OF :m
-  else if (strcmp(message, ":pull") == 0 || strcmp(message, ":m") == 0) {
+  else if (strcmp(message, ":pull") == 0) {
     if (!maze_running_check()) {
       ui_maze(2);
     }
@@ -196,6 +211,18 @@ void input_callback(const char* message) {
   else if (strcmp(message, ":fight") == 0 || strcmp(message, ":f") == 0) {
     ui_boss(10, 18);
   }
+
+    // Message ':open' calls the box 
+  else if (strcmp(message, ":open") == 0 || strcmp(message, ":o") == 0) {
+    if (!box_running_check()) {
+      ui_box(2);
+    }
+    else {
+      ui_display("Narrator", "You have already opened this box");
+    }
+  }
+  
+  
   // Otherwise, display the message in the chat
   else { 
     ui_display("Player Two", message); 
@@ -237,9 +264,11 @@ void* player_one_receive(void* args) {
         ui_display("WARNING", "PLAYER 1 HAS QUIT");
         break;
       }
-      // Don't display the message if Player Two is trying to show the maze
-      // FIX: GET RID OF :m
-      else if ((strcmp(info.message, ":enter") == 0) || (strcmp(info.message, ":m") == 0)) {
+      // Don't display the message if Player One is trying to show the maze
+      else if ((strcmp(info.message, ":enter") == 0)) {
+        continue;
+      }
+      else if (strcmp(info.message, ":open") == 0){
         continue;
       }
       else if ((strcmp(info.message, ":view") == 0) || (strcmp(info.message, ":v") == 0)) {
@@ -248,9 +277,11 @@ void* player_one_receive(void* args) {
       // We received data from Player One
       else if (strcmp(info.username, "Data") == 0) {
         if (strcmp(info.message, "escaped") == 0) maze_done = true;
+        else if (strcmp(info.message, "solved_one") == 0) box1_done = true;
         continue;
       }
-      // We received data from Player One
+
+       // We received data from Player One
       else if (strcmp(info.username, "dam") == 0) {
         int damage = atoi(info.message);
         do_damage(damage);
@@ -266,6 +297,7 @@ void* player_one_receive(void* args) {
         change_p2_posy(y);
         continue;
       }
+
 
       // We have now received a message; set bool to to true
       received_message = true;

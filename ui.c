@@ -15,6 +15,10 @@
 // The timeout for input
 #define INPUT_TIMEOUT_MS 10
 
+// Maze starting positions:
+#define START_X 3;
+#define START_Y 0;
+
 // Time for players to escape in seconds
 #define TIME_LIMIT 600
 
@@ -68,6 +72,8 @@ bool maze_running = false;
 bool door_running = false;
 // When true, the boss game should run
 bool boss_running = false;
+// When true, box game should run;
+bool box_running = false;
 
 // The handle for the UI thread
 pthread_t ui_thread;
@@ -82,18 +88,22 @@ pthread_mutex_t door_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t boss_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t boss_health_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t boss_attack_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t box_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // The player that is using the UI (Player One or Player Two)
 // Initialized when the maze game is running
 int stored_player = -1;
 
 // Position of the player in the games where position is needed (maze & boss)
-int player_x = 3;
-int player_y = 0;
+int player_x = START_X;
+int player_y = START_Y;
 
 // -- MAZE GAME -- //
 // 2D array holding the maze read in from maze.txt
 char** maze;
+// Global variables to keep track of where the player in the maze is
+int maze_x = START_X;
+int maze_y = START_Y;
 
 // -- MATH GAME -- //
 // 2D array holding the paper with math equations from paper.txt
@@ -106,6 +116,15 @@ char nums[4] = {'0', '0', '0', '0'};
 // The current number on the lock on the door that the user is trying to
 // increment or decrement
 int curr_num = 0;
+char** door;
+
+// -- ANAGRAM GAME --
+//2D array holding the box read from box1.txt
+char** box1;
+//2D array holding the box read from box2.txt
+char** box2;
+//Global pointer to a string to keep track of the the user answer input
+char* box_answer;
 
 // -- BOSS --//
 // 2D array holding the battlefield + the final boss from boss.txt
@@ -176,6 +195,21 @@ bool door_running_check() {
   Pthread_mutex_unlock(&door_lock);
   return door;
 } // door_running_check
+
+/**
+ * Returns the boolean for the box_running (protected by locks).
+ * 
+ * \return true or false depending on if anagram/box game is currently running.
+ */
+bool box_running_check(){
+  bool box;
+  // Make a copy of the boolean
+  // Lock to avoid race conditions
+  Pthread_mutex_lock(&box_lock);
+  box = box_running;
+  Pthread_mutex_unlock(&box_lock);
+  return box;
+} //box_running_check
 
 /**
  * Returns the boolean for the boss_running (protected by locks).
@@ -296,6 +330,8 @@ void ui_init(input_callback_t callback) {
   maze = read_game("maze.txt");
   door = read_game("door.txt");
   paper = read_game("paper.txt");
+  box1 = read_game("box1.txt");
+  box2 = read_game("box2.txt");
   boss = read_game("boss.txt");
 
   // Running
@@ -348,8 +384,8 @@ void ui_run() {
         }
       // Otherwise, the player is out of bounds; keep them at the start
         else {
-          player_x = 3;
-          player_y = 0;
+          player_x = START_X;
+          player_y = START_Y;
         }
       }
       // -- FOR BOSS -- //
@@ -419,9 +455,16 @@ void ui_run() {
         char message[buffer_len + 1];
         memcpy(message, buffer, buffer_len);
         message[buffer_len] = '\0';
-
-        // Run the callback function provided to ui_init
-        input_callback(message);
+        
+        if (message[0] == '[' && message[buffer_len -1] == ']'){
+          box_answer = (char*)malloc(buffer_len+1);
+          strncpy(box_answer, message, buffer_len+1);
+          ui_box(stored_player);
+        }
+        else {
+           // Run the callback function provided to ui_init
+          input_callback(message);
+        }
 
         // Clear the input field, but only if the UI didn't exit
         if (ui_running) form_driver(input_form, REQ_CLR_FIELD);
@@ -611,11 +654,13 @@ void ui_maze(int player) {
   Pthread_mutex_unlock(&ui_lock);
 } // ui_maze
 
-
+/**
+ *Run the door/math game in UI
+*/
 void ui_door() {
   stored_player = 2;
   
- // Set maze_running to true
+ // Set door_running to true
   Pthread_mutex_lock(&door_lock);
   door_running = true;
   Pthread_mutex_unlock(&door_lock);
@@ -633,7 +678,7 @@ void ui_door() {
   }
 
 if (ui_running) {
-    // Print the maze
+    // Print the door
     Pthread_mutex_lock(&ui_lock);
     form_driver(game_form, REQ_CLR_FIELD);
     
@@ -655,6 +700,9 @@ if (ui_running) {
   }
 } // ui_door
 
+/**
+ * Display paper/math game in UI
+ */
 void ui_paper() {
   if (ui_running) {
     Pthread_mutex_lock(&ui_lock);
@@ -670,10 +718,55 @@ void ui_paper() {
 } // ui_paper
 
 /**
- * @brief TODO
+ * Run box/anagram game in UI
+ * \param player_id the user calling this function
+*/
+void ui_box(int player_id){
+  stored_player = player_id; //store playerID in global
+
+  Pthread_mutex_lock(&box_lock);
+  box_running = true; //change status of box_running boolean
+  Pthread_mutex_unlock(&box_lock);
+
+  char* solution_1 = "[pmosera]";
+  char* solution_2 = "[charliecurtsinger]";
+  
+  bool solve = false;
+  if(box_answer != NULL){
+  if (player_id == 1 && strcmp(box_answer, solution_1) == 0){
+      solve = true;
+    }
+  else if (player_id == 2 && (strcmp(box_answer, solution_2) == 0))
+      solve = true;
+  }//when there is user input, check with the solutions
+
+  if (solve){
+      Pthread_mutex_lock(&box_lock);
+      box_running = false;
+      Pthread_mutex_unlock(&box_lock);
+  } //when anagram solved, change status of box_running boolean
+
+  if(ui_running){
+    Pthread_mutex_lock(&ui_lock);
+    form_driver(game_form, REQ_CLR_FIELD);
+    for (int y = 0; y < SIZE; y++) {
+        for (int x = 0; x < SIZE; x++){
+          if (player_id == 1)
+            form_driver(game_form, box1[y][x]);
+          else 
+            form_driver(game_form, box2[y][x]);
+        }
+        form_driver(game_form, REQ_NEW_LINE);
+    }
+    Pthread_mutex_unlock(&ui_lock);
+  }// display box
+} // ui_box
+
+/**
+ * @brief update the position of the other player
  * 
- * @param p2_x 
- * @param p2_y 
+ * @param p2_x current x position of the other player
+ * @param p2_y current y position of the other player
  */
 void change_p2_posx(int p2_x) {
   stored_p2_x=p2_x;
@@ -682,10 +775,12 @@ void change_p2_posy(int p2_y) {
   stored_p2_y=p2_y;
 }
 
+/**
+ * Return the current position of the player using the UI
+*/
 int get_pos_x() {
   return player_x;
 }
-
 int get_pos_y() {
   return player_y;
 }
@@ -836,10 +931,15 @@ void ui_exit() {
     free(maze[i]);
     free(door[i]);
     free(paper[i]);
+    free(box1[i]);
+    free(box2[i]);
     free(boss[i]);
   }
   free(maze);
   free(door);
   free(paper);
+  free(box1);
+  free(box2);
   free(boss);
+  free(box_answer);
 } // ui_exit

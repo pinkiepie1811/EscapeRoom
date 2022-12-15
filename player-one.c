@@ -20,6 +20,7 @@ bool received_message = false;
 bool sent_message = false;
 
 bool door_done = false;
+bool box2_done = false;
 
 /**
  * @brief TODO
@@ -62,31 +63,22 @@ void* boss_attack_func(void* args) {
   return NULL;
 }
 
+
 /**
  * Thread for pacing the narrative of the game and controlling the game play
  */
 void* narrate(void* args) {
   // Introduction sequence
   ui_display("Narrator","You wake up.");
-  sleep(0);
   ui_display("Narrator","Taking a look around, you see you are trapped in a stone chamber.");
-  sleep(0);
   ui_display("Narrator","You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.");
-  sleep(0);
   ui_display("Narrator","Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond.");
-  sleep(0);
   ui_display("Narrator","You need to escape before it is too late!");
-  sleep(0);
   ui_display("Narrator","Your phone starts to buzz in your pocket, but when you check it out, it has no signal.");
-  sleep(0);
   ui_display("Narrator","Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor?");
-  sleep(0);
   ui_display("Narrator","You try typing something in. What's this?");
-  sleep(0);
   ui_display("Narrator","It seems someone else is on the other end of this line- maybe they are stuck too.");
-  sleep(0);
   ui_display("Narrator","Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
-  sleep(0);
   ui_display("Narrator","Try sending a message to each other now!");
 
   // Wait for players to try the chat
@@ -102,13 +94,9 @@ void* narrate(void* args) {
   }
   // Start maze sequence
   ui_display("Narrator", "As you consider your situation, the cracks in the wall in front of you start to glow brighter, before they abruptly split apart into a pathway.");
-  sleep(0);
   ui_display("Narrator", "You poke your head in, and realize you there looks to be a set of tunnels ahead.");
-  sleep(0);
   ui_display("Narrator", "However, the glow in the walls is limited to your room- if you step in you will be walking in the dark."); 
-  sleep(0);
   ui_display("Narrator", "Still, you have little other choice.");
-  sleep(0);
   ui_display("Narrator", "[Type :enter to enter the darkness. Use your arrow keys to navigate.]");
   
   // Wait for maze to start
@@ -120,35 +108,61 @@ void* narrate(void* args) {
    if(!maze_running_check()) break;
   }
   ui_display("Narrator", "Congrats! You made it through the maze! You step out of the darkness to a large cavern.");
-  sleep(0);
 
-  message_info_t info = {"Data", "escaped"};
-  send_message(fd, info);
+  message_info_t maze_info = {"Data", "escaped"};
+  send_message(fd, maze_info);
 
   ui_display("Narrator", "You see a piece of paper. [Type :view to look at the paper");
-  sleep(0);
 
   while (1) {
     if (door_done) {
       break;
     }
   }
+
+   //Anagram game
+  ui_display("Narrator", "Another emtpy room!");
+  ui_display("Narrator", "But wait!! There is a small box in the corner. Let's see what's inside. [type :open]");
+
+  while(1){
+    if(box_running_check()) break;
+  }
+
+  ui_display("Narrator", "These words do not make much sense, but it seems like the letters can be moved around.");
+  ui_display("Narrator", "Enter '[correct sequence]' to rearrange these words");
+
+  // Wait for box to finish
+  while(1) {
+   if(!box_running_check()) break;
+  }
+
+  message_info_t box_info = {"Data", "solved_one"};
+  send_message(fd, box_info);
+
+  if (box2_done == false){
+      ui_display("Narrator", "Your friend seems to be struggling. Communicate and help them!");
+  
+  }
+
+  while(1){
+    if(box2_done) break;
+  }
+
+  ui_display("Narrator", "Congratulations! Both of you have cracked the code!!");
+
+  
+  ui_display("Narrator", "MONSTOR");
   ui_display("Narrator", "The walls shake and fall away- you are in a giant cavern!");
-  sleep(0);
 
   ui_display("Narrator", "It looks like theres an.... octopus? in the cavern with you! Its shooting lazers!");
-  sleep(0);
   ui_display("Narrator", "[Type :fight to start combat]");
   while (1) {
     if (boss_running_check()) {
       break;
     }
   }
-  sleep(0);
   ui_display("Narrator", "You see someone- maybe its your friend the TO DO [Use arrow keys to move and avoid attacks");
-  sleep(0);
   ui_display("Narrator", "[Touch the monster to do damage]");
-  sleep(0);
   pthread_t boss_attack_thread;
   if (pthread_create(&boss_attack_thread, NULL, boss_attack_func, NULL) != 0) {
     perror("pthread_create failed");
@@ -171,8 +185,7 @@ void input_callback(const char* message) {
     ui_exit();
   }
   // Message of ':enter' calls the maze game 
-  // FIX: GET RID OF :m
-  else if (strcmp(message, ":enter") == 0 || strcmp(message, ":m") == 0) {
+  else if (strcmp(message, ":enter") == 0){
     if (!maze_running_check()) {
       ui_maze(1);
     }
@@ -183,6 +196,18 @@ void input_callback(const char* message) {
   else if (strcmp(message, ":view") == 0 || strcmp(message, ":v") == 0) {
     ui_paper();
   }
+
+    // Message ':open' calls the box 
+  else if (strcmp(message, ":open") == 0 || strcmp(message, ":o") == 0) {
+    if (!box_running_check()) {
+      ui_box(1);
+    }
+    else {
+      ui_display("Narrator", "You have already opened this box");
+    }
+  }
+  
+
   else if (strcmp(message, ":fight") == 0 || strcmp(message, ":f") == 0) {
     ui_boss(10, 18);
   }
@@ -226,17 +251,21 @@ void* player_two_receive(void* arg) {
         ui_display("WARNING", "PLAYER 2 HAS QUIT");
         break;
       }
-      // Don't display the message if Player One is trying to start the maze
-      // FIX: GET RID OF :m
-      if ((strcmp(info.message, ":pull") == 0) || (strcmp(info.message, ":m") == 0)) {
+      // Don't display the message if Player Two is trying to start the maze
+      if ((strcmp(info.message, ":pull") == 0)) {
         continue;
       }
-      else if ((strcmp(info.message, ":door") == 0) || (strcmp(info.message, ":m") == 0)) {
+      else if (strcmp(info.message, ":door") == 0) {
         continue;
       }
-      // We received data from Player One
+
+      else if (strcmp(info.message, ":open") == 0){
+        continue;
+      }
+      // We received data from Player Two
       else if (strcmp(info.username, "Data") == 0) {
         if (strcmp(info.message, "opened") == 0) door_done = true;
+        else if (strcmp(info.message, "solved_two") == 0) box2_done = true;
         continue;
       }
 
