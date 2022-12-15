@@ -13,6 +13,7 @@
         "stdio.h": "c",
         "stdbool.h": "c",
         "form.h": "c",
-        "message.h": "c"
+        "message.h": "c",
+        "string.h": "c"
     }
 }

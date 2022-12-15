@@ -9,9 +9,6 @@
 #include "socket.h"
 #include "ui.h"
 
-// fix maze solution
-// narrative + instructions
-
 // The socket to send and receive messages across to and from Player Two
 // Initialize to -1 so we know not to send messages until we are connected to Player Two
 int fd = -1;
@@ -85,15 +82,25 @@ void* boss_attack_func(void* args) {
 void* narrate(void* args) {
   // Introduction sequence
   ui_display("Narrator","You wake up.");
+  sleep(2);
   ui_display("Narrator","Taking a look around, you see you are trapped in a stone chamber with a large padlocked door to the side.");
+  sleep(2);
   ui_display("Narrator","You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.");
+  sleep(2);
   ui_display("Narrator","Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond.");
+  sleep(2);
   ui_display("Narrator","You need to escape before it is too late!");
+  sleep(2);
   ui_display("Narrator","Your phone starts to buzz in your pocket, but when you check it out, it has no signal.");
+  sleep(2);
   ui_display("Narrator","Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor?");
+  sleep(2);
   ui_display("Narrator","You try typing something in. What's this?");
+  sleep(2);
   ui_display("Narrator","It seems someone else is on the other end of this line- maybe they are stuck too.");
+  sleep(2);
   ui_display("Narrator","Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
+  sleep(2);
   ui_display("Narrator","Try sending a message to each other now!");
 
   // Wait for players to try the chat
@@ -110,7 +117,10 @@ void* narrate(void* args) {
 
   // Start maze sequence
   ui_display("Narrator", "Other than the cracks and the door, the room you are in is empty, save for a strange lever almost directly in front of where you woke up.");
-  ui_display("Narrator", "Pull the lever [type :pull]");
+  sleep(2);
+  ui_display("Narrator", "You wonder if there is any way to help your friend.");
+  sleep(2);
+  ui_display("Narrator", "Your option is to pull the lever. Pull the lever [type :pull]");
 
   while (1) {
     if (maze_done) {
@@ -118,27 +128,28 @@ void* narrate(void* args) {
     }
   }
 
-  ui_display("Narrator", "A keypad pops open on the wall near the door. [Type :door]");
+  ui_display("Narrator", "A keypad pops open on the door. [Type :door]");
 
   // Wait for door to start
   while(1) {
    if(door_running_check()) break;
   }
+  ui_display("Narrator", "[Use the arrow keys to adjust the numbers on the lock]");
   // Wait for door to finish
   while(1) {
    if(!door_running_check()) break;
   }
-  ui_display("Narrator", "The door opens!");
   // TODO: add stuff about a door w/ a number lock on it here too. they can look at either.
 
   message_info_t info = {"Data", "opened"};
   send_message(fd, info);
 
   ui_display("Narrator", "The door opens into a giant cavern!");
-
+  sleep(2);
+  
     //Anagram game
-  ui_display("Narrator", "Another emtpy room!");
-  ui_display("Narrator", "But wait!! There is a small box in the corner. Let's see what's inside. [type :open]");
+
+  ui_display("Narrator", "But wait! There is a small box in the corner. Let's see what's inside. [Type :open]");
 
   while(1){
     if(box_running_check()) break;
@@ -146,7 +157,7 @@ void* narrate(void* args) {
 
   ui_display("Narrator", "These words do not make much sense, but it seems like the letters can be moved around.");
   sleep(2);
-  ui_display("Narrator", "Enter '[correct sequence]' to rearrange these words");
+  ui_display("Narrator", "Enter '[correct sequence]' to rearrange these words into a name.");
 
   // Wait for box to finish
   while(1) {
@@ -164,16 +175,20 @@ void* narrate(void* args) {
     if(box1_done) break;
   }
 
-  ui_display("Narrator", "Congratulations! Both of you have cracked the code!!");
-
-  ui_display("Narrator", "It looks like theres an.... octopus? in the cavern with you! Its shooting lazers!");
+  ui_display("Narrator", "Both of you have cracked the code! You hesitantly say the code out loud, only to hear another voice say 'PM Osera' at the other end of the cavern.");
+  sleep(2);
+  ui_display("Narrator", "It's your friend! As you reunite, you realize...");
+  sleep(2);
+  ui_display("Narrator", "It looks like theres a.... giant octopus? in the cavern with you! Its shooting lasers!");
+  sleep(2);
   ui_display("Narrator", "[Type :fight to start combat]");
   while (1) {
     if (boss_running_check()) {
       break;
     }
   }
-  ui_display("Narrator", "You see someone- maybe its your friend the TO DO [Use arrow keys to move and avoid attacks");
+  ui_display("Narrator", "[Use arrow keys to move and avoid attacks]");
+  sleep(2);
   ui_display("Narrator", "[Touch the monster to do damage]");
   pthread_t boss_attack_thread;
   if (pthread_create(&boss_attack_thread, NULL, boss_attack_func, NULL) != 0) {
@@ -289,7 +304,10 @@ void* player_one_receive(void* args) {
       else if (strcmp(info.message, ":open") == 0){
         continue;
       }
-      else if ((strcmp(info.message, ":view") == 0) || (strcmp(info.message, ":v") == 0)) {
+      else if (strcmp(info.message, ":view") == 0) {
+        continue;
+      }
+      else if (strcmp(info.message, ":fight") == 0) {
         continue;
       }
       // We received data from Player One
