@@ -74,33 +74,22 @@ void* boss_attack_func(void* args) {
   return NULL;
 }
 
-
 /**
  * Thread for pacing the narrative of the game and controlling the game play
  */
 void* narrate(void* args) {
   // Introduction sequence
-  ui_display("Narrator","You wake up.");
-  sleep(2);
-  ui_display("Narrator","Taking a look around, you see you are trapped in a stone chamber.");
-  sleep(2);
-  ui_display("Narrator","You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.");
-  sleep(2);
-  ui_display("Narrator","Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond.");
-  sleep(2);
-  ui_display("Narrator","You need to escape before it is too late!");
-  sleep(2);
-  ui_display("Narrator","Your phone starts to buzz in your pocket, but when you check it out, it has no signal.");
-  sleep(2);
-  ui_display("Narrator","Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor?");
-  sleep(2);
-  ui_display("Narrator","You try typing something in. What's this?");
-  sleep(2);
-  ui_display("Narrator","It seems someone else is on the other end of this line- maybe they are stuck too.");
-  sleep(2);
-  ui_display("Narrator","Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
-  sleep(2);
-  ui_display("Narrator","Try sending a message to each other now!");
+  narrate_display("You wake up.");
+  narrate_display("Taking a look around, you see you are trapped in a stone chamber.");
+  narrate_display("You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.");
+  narrate_display("Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond.");
+  narrate_display("You need to escape before it is too late!");
+  narrate_display("Your phone starts to buzz in your pocket, but when you check it out, it has no signal.");
+  narrate_display("Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor?");
+  narrate_display("You try typing something in. What's this?");
+  narrate_display("It seems someone else is on the other end of this line- maybe they are stuck too.");
+  narrate_display("Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
+  narrate_display("Try sending a message to each other now!");
 
   // Wait for players to try the chat
   while(1) {
@@ -114,11 +103,9 @@ void* narrate(void* args) {
     exit(EXIT_FAILURE);
   }
   // Start maze sequence
-  ui_display("Narrator", "As you consider your situation, the cracks in the wall in front of you start to glow brighter, before they abruptly split apart into a pathway.");
-  sleep(2);
-  ui_display("Narrator", "You poke your head in, and realize you there looks to be a set of tunnels ahead. However, the glow in the walls is limited to your room- if you step in you will be walking in the dark.");
-  sleep(2);
-  ui_display("Narrator", "Still, you have little other choice. [Type ':enter' to enter the darkness. Use your arrow keys to navigate.]");
+  narrate_display( "As you consider your situation, the cracks in the wall in front of you start to glow brighter, before they abruptly split apart into a pathway.");
+  narrate_display( "You poke your head in, and realize you there looks to be a set of tunnels ahead. However, the glow in the walls is limited to your room- if you step in you will be walking in the dark.");
+  narrate_display( "Still, you have little other choice. [Type ':enter' to enter the darkness. Use your arrow keys to navigate.]");
   
   // Wait for maze to start
   while(1) {
@@ -128,13 +115,13 @@ void* narrate(void* args) {
   while(1) {
    if(!maze_running_check()) break;
   }
-  ui_display("Narrator", "Congrats! You made it through the maze! You step out of the darkness to a large cavern.");
+
+  narrate_display( "Congrats! You made it through the maze! You step out of the darkness to a large cavern.");
 
   message_info_t maze_info = {"Data", "escaped"};
   send_message(fd, maze_info);
 
-  sleep(2);
-  ui_display("Narrator", "You see a piece of paper at your feet. [Type ':view' to look at the paper");
+  narrate_display( "You see a piece of paper at your feet. [Type ':view' to look at the paper");
 
   while (1) {
     if (door_done) {
@@ -143,15 +130,14 @@ void* narrate(void* args) {
   }
 
    //Anagram game
-  ui_display("Narrator", "But wait! You suddenly notice a small box in the corner. Let's see what's inside. [Type ':open']");
+  narrate_display( "But wait! You suddenly notice a small box in the corner. Let's see what's inside. [Type ':open']");
 
   while(1){
     if(box_running_check()) break;
   }
 
-  ui_display("Narrator", "These words do not make much sense, but it seems like the letters can be moved around.");
-  sleep(2);
-  ui_display("Narrator", "Enter '[correct sequence]' to rearrange these words into a name (without spaces).");
+  narrate_display( "These words do not make much sense, but it seems like the letters can be moved around.");
+  narrate_display( "Enter '[correct sequence]' to rearrange these words into a name (without spaces).");
 
   // Wait for box to finish
   while(1) {
@@ -162,7 +148,7 @@ void* narrate(void* args) {
   send_message(fd, box_info);
 
   if (box2_done == false){
-      ui_display("Narrator", "Your friend seems to be struggling. Communicate and help them!");
+      narrate_display( "Your friend seems to be struggling. Communicate and help them!");
   
   }
 
@@ -170,36 +156,32 @@ void* narrate(void* args) {
     if(box2_done) break;
   }
 
-  ui_display("Narrator", "Both of you have cracked the code! You hesitantly say the code out loud, only to hear another voice say 'Charlie Curtsinger' at the other end of the cavern.");
+  narrate_display( "Both of you have cracked the code! You hesitantly say the code out loud, only to hear another voice say 'Charlie Curtsinger' at the other end of the cavern.");
 
-  sleep(2);
-  ui_display("Narrator", "It's your friend! As you reunite, you realize...");
-  sleep(2);
-  ui_display("Narrator", "It looks like theres a.... giant octopus? in the cavern with you! Its shooting lasers!");
-  sleep(2);
-  ui_display("Narrator", "[Type ':fight' to start combat]");
+  narrate_display( "It's your friend! As you reunite, you realize...");
+  narrate_display( "It looks like theres a.... giant octopus? in the cavern with you! Its shooting lasers!");
+  narrate_display( "[Type ':fight' to start combat]");
+
   while (1) {
     if (boss_running_check()) {
       break;
     }
   }
-  ui_display("Narrator", "[Use arrow keys to move and avoid attacks]");
-  sleep(2);
-  ui_display("Narrator", "[Touch the monster to do damage]");
+  narrate_display( "[Use arrow keys to move and avoid attacks]");
+  
   pthread_t boss_attack_thread;
   if (pthread_create(&boss_attack_thread, NULL, boss_attack_func, NULL) != 0) {
     perror("pthread_create failed");
     exit(EXIT_FAILURE);
   }
+  narrate_display( "[Touch the monster to do damage]");
 
   while(1) {
    if(!boss_running_check()) break;
   }
 
-  ui_display("Narrator", "The octopus dissolves into the floor!");
-  sleep(2);
-  ui_display("Narrator", "The open sky lies beyond. Enter [':exit'] to escape to freedom!");
-
+  narrate_display( "The octopus dissolves into the floor!");
+  narrate_display( "The open sky lies beyond. Enter [':exit'] to escape to freedom!");
 
   return NULL;
 } // narrate
