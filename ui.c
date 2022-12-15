@@ -20,7 +20,7 @@
 #define START_Y 0;
 
 // Time for players to escape in seconds
-#define TIME_LIMIT 360
+#define TIME_LIMIT 900
 
 #define START_X_BOSS 10
 #define START_Y_BOSS 18
@@ -614,10 +614,14 @@ void ui_maze(int player) {
       // Print the maze
       for (int y = 0; y < SIZE; y++) {
         for (int x = 0; x < SIZE; x++){
-          form_driver(game_form, maze[y][x]);
+          if (maze[y][x] == '*') {
+            form_driver(game_form, 'X');
+          }
+          else {form_driver(game_form, maze[y][x]);}
         }
         form_driver(game_form, REQ_NEW_LINE);
       }
+      ui_display("Narrator", "There's a map on the wall! Maybe you can use it to help your friend?");
     }
     // PLAYER ONE // 
     else if (player == 1) {
@@ -625,6 +629,7 @@ void ui_maze(int player) {
       if (maze[player_y][player_x] == '*') {
         player_x = 3;
         player_y = 0;
+        ui_display("Narrator", "You hit a wall! Your consciousness fades, and you wake up... back at the start.");
       }
       // If the player is at the end, the maze is not running
       else if (maze[player_y][player_x] == 'E') {

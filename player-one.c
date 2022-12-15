@@ -118,7 +118,7 @@ void* narrate(void* args) {
   sleep(2);
   ui_display("Narrator", "You poke your head in, and realize you there looks to be a set of tunnels ahead. However, the glow in the walls is limited to your room- if you step in you will be walking in the dark.");
   sleep(2);
-  ui_display("Narrator", "Still, you have little other choice. [Type :enter to enter the darkness. Use your arrow keys to navigate.]");
+  ui_display("Narrator", "Still, you have little other choice. [Type ':enter' to enter the darkness. Use your arrow keys to navigate.]");
   
   // Wait for maze to start
   while(1) {
@@ -134,7 +134,7 @@ void* narrate(void* args) {
   send_message(fd, maze_info);
 
   sleep(2);
-  ui_display("Narrator", "You see a piece of paper. [Type :view to look at the paper");
+  ui_display("Narrator", "You see a piece of paper at your feet. [Type ':view' to look at the paper");
 
   while (1) {
     if (door_done) {
@@ -143,7 +143,7 @@ void* narrate(void* args) {
   }
 
    //Anagram game
-  ui_display("Narrator", "But wait! You suddenly notice a small box in the corner. Let's see what's inside. [type :open]");
+  ui_display("Narrator", "But wait! You suddenly notice a small box in the corner. Let's see what's inside. [Type ':open']");
 
   while(1){
     if(box_running_check()) break;
@@ -151,7 +151,7 @@ void* narrate(void* args) {
 
   ui_display("Narrator", "These words do not make much sense, but it seems like the letters can be moved around.");
   sleep(2);
-  ui_display("Narrator", "Enter '[correct sequence]' to rearrange these words into a name.");
+  ui_display("Narrator", "Enter '[correct sequence]' to rearrange these words into a name (without spaces).");
 
   // Wait for box to finish
   while(1) {
@@ -177,7 +177,7 @@ void* narrate(void* args) {
   sleep(2);
   ui_display("Narrator", "It looks like theres a.... giant octopus? in the cavern with you! Its shooting lasers!");
   sleep(2);
-  ui_display("Narrator", "[Type :fight to start combat]");
+  ui_display("Narrator", "[Type ':fight' to start combat]");
   while (1) {
     if (boss_running_check()) {
       break;
@@ -198,7 +198,7 @@ void* narrate(void* args) {
 
   ui_display("Narrator", "The octopus dissolves into the floor!");
   sleep(2);
-  ui_display("Narrator", "The open sky lies beyond. Enter [:exit] to escape to freedom!");
+  ui_display("Narrator", "The open sky lies beyond. Enter [':exit'] to escape to freedom!");
 
 
   return NULL;

@@ -120,7 +120,7 @@ void* narrate(void* args) {
   sleep(2);
   ui_display("Narrator", "You wonder if there is any way to help your friend.");
   sleep(2);
-  ui_display("Narrator", "Your option is to pull the lever. Pull the lever [type :pull]");
+  ui_display("Narrator", "Your option is to pull the lever. Pull the lever [Type ':pull']");
 
   while (1) {
     if (maze_done) {
@@ -128,7 +128,7 @@ void* narrate(void* args) {
     }
   }
 
-  ui_display("Narrator", "A keypad pops open on the door. [Type :door]");
+  ui_display("Narrator", "A keypad pops open on the door. [Type ':door']");
 
   // Wait for door to start
   while(1) {
@@ -149,7 +149,7 @@ void* narrate(void* args) {
   
     //Anagram game
 
-  ui_display("Narrator", "But wait! There is a small box in the corner. Let's see what's inside. [Type :open]");
+  ui_display("Narrator", "But wait! There is a small box in the corner. Let's see what's inside. [Type ':open']");
 
   while(1){
     if(box_running_check()) break;
@@ -157,7 +157,7 @@ void* narrate(void* args) {
 
   ui_display("Narrator", "These words do not make much sense, but it seems like the letters can be moved around.");
   sleep(2);
-  ui_display("Narrator", "Enter '[correct sequence]' to rearrange these words into a name.");
+  ui_display("Narrator", "Enter '[correct sequence]' to rearrange these words into a name (without spaces).");
 
   // Wait for box to finish
   while(1) {
@@ -181,7 +181,7 @@ void* narrate(void* args) {
   sleep(2);
   ui_display("Narrator", "It looks like theres a.... giant octopus? in the cavern with you! Its shooting lasers!");
   sleep(2);
-  ui_display("Narrator", "[Type :fight to start combat]");
+  ui_display("Narrator", "[Type ':fight' to start combat]");
   while (1) {
     if (boss_running_check()) {
       break;
@@ -203,7 +203,7 @@ void* narrate(void* args) {
 
   ui_display("Narrator", "The octopus dissolves into the floor!");
   sleep(2);
-  ui_display("Narrator", "The open sky lies beyond. Enter [:exit] to escape to freedom!");
+  ui_display("Narrator", "The open sky lies beyond. [Enter ':exit' to escape to freedom!]");
   sleep(2);
 
   
