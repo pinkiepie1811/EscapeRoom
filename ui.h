@@ -58,6 +58,8 @@ void ui_run();
  */
 void ui_display(const char* username, const char* message);
 
+void narrate_display(const char* message);
+
 /**
  * Run the main UI loop. This function will only return the UI is exiting.
  */
