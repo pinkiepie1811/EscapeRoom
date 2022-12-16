@@ -92,7 +92,6 @@ pthread_mutex_t box_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t boss_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t boss_health_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t boss_attack_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t player_lock = PTHREAD_MUTEX_INITIALIZER;
 
 // -- GLOBALS -- //
 // The player that is using the UI (Player One or Player Two)
@@ -369,9 +368,7 @@ void ui_run() {
     else if (((ch == KEY_DOWN) || (ch == KEY_UP) || (ch == KEY_RIGHT) || (ch == KEY_LEFT)) && ((maze_running_check() && stored_player == 1) || boss_running_check())) {
       // Adjust the position of Player One in the maze accordingly
       if (ch == KEY_RIGHT) {
-        //Pthread_mutex_lock(&player_lock);
         player_x++;
-        //Pthread_mutex_unlock(&player_lock);
       } 
       else if (ch == KEY_LEFT) {
         player_x--;
