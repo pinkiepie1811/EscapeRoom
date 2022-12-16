@@ -331,12 +331,12 @@ void ui_init(input_callback_t callback) {
   pthread_mutex_init(&ui_lock, &ui_lock_attr);
 
   // Read the maze
-  maze = read_game("maze.txt");
-  door = read_game("door.txt");
-  paper = read_game("paper.txt");
-  box1 = read_game("box1.txt");
-  box2 = read_game("box2.txt");
-  boss = read_game("boss.txt");
+  maze = read_game("game-boards/maze.txt");
+  door = read_game("game-boards/door.txt");
+  paper = read_game("game-boards/paper.txt");
+  box1 = read_game("game-boards/box1.txt");
+  box2 = read_game("game-boards/box2.txt");
+  boss = read_game("game-boards/boss.txt");
 
   // Running
   ui_running = true;
@@ -617,6 +617,7 @@ void ui_maze(int player) {
     Pthread_mutex_lock(&ui_lock);
     // PLAYER TWO // 
     if (player == 2) {
+      form_driver(game_form, REQ_CLR_FIELD);
       // Print the maze
       for (int y = 0; y < SIZE; y++) {
         for (int x = 0; x < SIZE; x++){

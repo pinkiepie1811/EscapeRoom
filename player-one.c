@@ -9,187 +9,228 @@
 #include "socket.h"
 #include "ui.h"
 
+// -- GLOBAL VARIABLES -- //
+
 // The socket to send and receive messages across to and from Player Two
 // Initialize to -1 so we know not to send messages until we are connected to Player Two
 int fd = -1;
 
 // Booleans that tell us whether the Player One has received the first message from
-// Player Two and whether Player One has sent the first message to Player Two
-// for introduction sequence
+// Player Two and whether Player One has sent the first message to Player Two (in beginning of game)
 bool received_message = false;
 bool sent_message = false;
 
+// Boolean that tells us if Player Two has unlocked the door
 bool door_done = false;
+
+// Boolean that tells us if PLayer Two has solved their anagram
 bool box2_done = false;
 
-/**
- * @brief TODO
- * 
- * @param args 
- * @return void* 
- */
-void* timer(void* args) {
-  while(ui_time() != -1) {   
-    sleep(1);
-  }
-  message_info_t info = {"Data", "time"};
-  send_message(fd, info);
-  ui_exit();
-  printf("\nYou're too late! Your time has run out. The ceiling has collapsed on you and your friend. The end.\n\n");
-  return NULL;
-}
-
-void* boss_attack_func(void* args) {
-  while(boss_running_check()) {
-    message_info_t info;
-    char mess[10];
-
-    info.username = "dam";
-    sprintf(mess, "%d", change_damage());
-    info.message = mess;
-    send_message(fd, info);
-
-    info.username = "posx";
-    sprintf(mess, "%d", get_pos_x());
-    info.message = mess;
-    send_message(fd, info);
-
-    info.username = "posy";
-    sprintf(mess, "%d", get_pos_y());
-    info.message = mess;
-    send_message(fd, info);
-
-    boss_attack();
-    ui_boss();
-
-    usleep(1000 * 500);
-  }
-  message_info_t last;
-    char mess[10];
-
-    last.username = "dam";
-    sprintf(mess, "%d", change_damage());
-    last.message = mess;
-    send_message(fd, last);
-  return NULL;
-}
+void* timer();            // Thread function that runs the timer
+void* boss_attack_func(); // Thread function that controls the boss attacks and sends data to Player Two (for boss fight)
 
 /**
- * Thread for pacing the narrative of the game and controlling the game play
+ * Thread function for pacing the narrative of the game and controlling the game play.
+ * This function creates and calls other thread functions to run concurrently. 
  */
 void* narrate(void* args) {
-  // Introduction sequence
+  // -- INTRODUCTION -- //
   narrate_display("You wake up.");
   narrate_display("Taking a look around, you see you are trapped in a stone chamber.");
   narrate_display("You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.");
-  narrate_display("Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond.");
+  narrate_display("But as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond.");
   narrate_display("You need to escape before it is too late!");
   narrate_display("Your phone starts to buzz in your pocket, but when you check it out, it has no signal.");
   narrate_display("Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor?");
   narrate_display("You try typing something in. What's this?");
-  narrate_display("It seems someone else is on the other end of this line- maybe they are stuck too.");
+  narrate_display("It seems someone else is on the other end of this line; they might be stuck too.");
   narrate_display("Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
   narrate_display("Try sending a message to each other now!");
+  narrate_display("[Type in a message using your keyboard and press the 'Enter' button to send it.]");
 
-  // Wait for players to try the chat
+  // Wait for players to send and receive messages from each other
   while(1) {
-    if (received_message && sent_message) {
-      break;
-    }
+    if (received_message && sent_message) break;
   }
+
+  // Create the timer thread to start the countdown
   pthread_t timer_thread;
   if (pthread_create(&timer_thread, NULL, timer, NULL) != 0) {
     perror("pthread_create failed");
     exit(EXIT_FAILURE);
   }
-  // Start maze sequence
-  narrate_display( "As you consider your situation, the cracks in the wall in front of you start to glow brighter, before they abruptly split apart into a pathway.");
-  narrate_display( "You poke your head in, and realize you there looks to be a set of tunnels ahead. However, the glow in the walls is limited to your room- if you step in you will be walking in the dark.");
-  narrate_display( "Still, you have little other choice. [Type ':enter' to enter the darkness. Use your arrow keys to navigate.]");
+
+  // -- MAZE -- //
+  narrate_display("As you consider your situation, the cracks in the wall in front of you start to glow even brighter, before they abruptly split apart into a pathway.");
+  narrate_display("You poke your head in, and there looks to be a set of tunnels ahead. However, the glow in the walls is limited to the room you are in; if you step, in you will be walking in the dark.");
+  narrate_display("Still, you have no other choice. [Type ':enter' to enter the darkness, and use your arrow keys to navigate.]");
   
   // Wait for maze to start
   while(1) {
-   if(maze_running_check()) break;
+    if(maze_running_check()) break;
   }
   // Wait for maze to finish
   while(1) {
-   if(!maze_running_check()) break;
+    if(!maze_running_check()) break;
   }
 
-  narrate_display( "Congrats! You made it through the maze! You step out of the darkness to a large cavern.");
-
-  message_info_t maze_info = {"Data", "escaped"};
+  // Player One got through the maze, so send that information to Player Two
+  message_info_t maze_info = {"data", "escaped"};
   send_message(fd, maze_info);
 
-  narrate_display( "You see a piece of paper at your feet. [Type ':view' to look at the paper");
+  // -- DOOR -- //
+  narrate_display("You made it through the maze! You step out of the darkness and into a large cavern.");
+  narrate_display( "A piece of paper flutters by your feet. Curious, you reach to pick it up. [Type ':view' to look at the paper]");
 
-  while (1) {
-    if (door_done) {
-      break;
-    }
+  // Wait until Player Two has unlocked the door
+  while(1) {
+    if (door_done) break;
   }
 
-   //Anagram game
-  narrate_display( "But wait! You suddenly notice a small box in the corner. Let's see what's inside. [Type ':open']");
+  // -- ANAGRAM -- //
+  narrate_display("You've helped your friend unlock the door!");
+  narrate_display("But wait! You suddenly notice a small box in the corner of the cavern. Let's see what's inside. [Type ':open' to open the box]");
 
-  while(1){
+  // Wait for anagram/box to start
+  while(1) {
     if(box_running_check()) break;
   }
+  
+  // Explain the annagrams
+  narrate_display( "The box has some words engraved in it, but they do not make much sense. It seems like the letters can be moved around.");
+  narrate_display( "Enter '[correct letter sequence]' to rearrange these letters into a name (without spaces).");
 
-  narrate_display( "These words do not make much sense, but it seems like the letters can be moved around.");
-  narrate_display( "Enter '[correct sequence]' to rearrange these words into a name (without spaces).");
-
-  // Wait for box to finish
+  // Wait for anagram/box to finish
   while(1) {
-   if(!box_running_check()) break;
+    if(!box_running_check()) break;
   }
-
-  message_info_t box_info = {"Data", "solved_one"};
+  
+  // Once Player One has solved their anagram, send that it is solved to Player Two
+  message_info_t box_info = {"data", "solved_one"};
   send_message(fd, box_info);
 
-  if (box2_done == false){
-      narrate_display( "Your friend seems to be struggling. Communicate and help them!");
-  
+  // If Player Two has not solved their anagram yet, let Player One know
+  if (!box2_done) {
+    narrate_display("Your friend seems to be struggling to solve their puzzle. Communicate and help them!");
   }
-
-  while(1){
+  // Wait until Player Two has sovled their anagram
+  while(1) {
     if(box2_done) break;
   }
 
-  narrate_display( "Both of you have cracked the code! You hesitantly say the code out loud, only to hear another voice say 'Charlie Curtsinger' at the other end of the cavern.");
+  // -- FINAL BOSS -- //
+  narrate_display("Both of you have cracked the code! You hesitantly say the code out loud, only to hear another voice say 'Charlie Curtsinger' at the other end of the cavern.");
+  narrate_display("You peer out into the darkness and see that it's your friend! But as you reunite, you realize...");
+  narrate_display("There's a... giant octopus? in the cavern with you! And it's shooting lasers at both of you!");
+  narrate_display("[Type ':fight' to start combat]");
 
-  narrate_display( "It's your friend! As you reunite, you realize...");
-  narrate_display( "It looks like theres a.... giant octopus? in the cavern with you! Its shooting lasers!");
-  narrate_display( "[Type ':fight' to start combat]");
-
-  while (1) {
-    if (boss_running_check()) {
-      break;
-    }
+  // Wait for final boss fight to start
+  while(1) {
+    if (boss_running_check()) break;
   }
-  narrate_display( "[Use arrow keys to move and avoid attacks]");
+
+  // Explain the boss fight
+  narrate_display("[Use your arrow keys to move around and avoid the laser attacks]");
   
+  // Create the boss attack thread to start the boss laser attacks
   pthread_t boss_attack_thread;
   if (pthread_create(&boss_attack_thread, NULL, boss_attack_func, NULL) != 0) {
     perror("pthread_create failed");
     exit(EXIT_FAILURE);
   }
-  narrate_display( "[Touch the monster to do damage]");
 
+  narrate_display("[Run up and touch the monster to do damage. The human touch is poisonous to him!]");
+
+  // Wait for final boss fight to finish
   while(1) {
    if(!boss_running_check()) break;
   }
 
-  narrate_display( "The octopus dissolves into the floor!");
-  narrate_display( "The open sky lies beyond. Enter [':exit'] to escape to freedom!");
+  // -- ENDING -- //
+  narrate_display("Success! You defeated the monster! The octopus dissolves into the floor, its screams of agony dissolving in the air.");
+  narrate_display("The cavern rumbles and opens. The open sky lies beyond. [Type ':exit' to escape to freedom!]");
 
   return NULL;
 } // narrate
 
 /**
+ * The thread function that runs the timer to let players know how much time they
+ * have left to escape. 
+ */
+void* timer() {
+  // Sleep 1 second if time isn't up yet.
+  // Once time is up, ui_time will return -1, indicating that the players have run out of time
+  while(ui_time() != -1) {   
+    sleep(1);
+  }
+
+  // Once the players have run out of time, we must exit the game
+  // Send data that we have run out of time to Player Two so they know we are exiting
+  message_info_t info = {"data", "time"};
+  send_message(fd, info);
+  // Exit
+  ui_exit();
+  // Print in terminal to let them know why they can't play the game anymore
+  printf("\nYou're too late! Your time has run out. The ceiling has collapsed on you and your friend. The end.\n\n");
+
+  return NULL;
+} // timer
+
+/**
+ * The thread function that continuously updates the monster's laser attacks and sends position
+ * and damage data to Player Two
+ */
+void* boss_attack_func() {
+  while(boss_running_check()) {
+    // Local message_info_t used to send messages over
+    message_info_t info;
+    char mess[10]; // Message is no more than 10 characters
+
+    // Send damage
+    info.username = "dam";
+    sprintf(mess, "%d", change_damage());
+    info.message = mess;
+    send_message(fd, info);
+
+    // Send Player One x-position
+    info.username = "posx";
+    sprintf(mess, "%d", get_pos_x());
+    info.message = mess;
+    send_message(fd, info);
+
+    // Send Player One y-position
+    info.username = "posy";
+    sprintf(mess, "%d", get_pos_y());
+    info.message = mess;
+    send_message(fd, info);
+
+    // Call boss_attack to update laser attacks
+    boss_attack();
+    // Call ui_boss to update the game board
+    ui_boss();
+
+    // Sleep for 0.5 seconds to give players time to dodge the attacks
+    usleep(1000 * 500);
+  }
+
+  // Once the final boss fight is over, send the outstanding damage over to Player Two
+  message_info_t last;
+  char mess[10]; // Message is no more than 10 characters
+
+  // Send the outstanding damage
+  last.username = "dam";
+  sprintf(mess, "%d", change_damage());
+  last.message = mess;
+  send_message(fd, last);
+
+  return NULL;
+} // boss_attack_func
+
+/**
  * This function is run whenever Player One hits enter after typing a message.
  * 
- * \param message  The string holding the message that Player One wants to send to Player Two
+ * \param message  The string holding the message that Player One wants to send to Player Two or the command
+ *                 for the game.
  */
 void input_callback(const char* message) {
   // Quitting mechanism
@@ -197,37 +238,42 @@ void input_callback(const char* message) {
     ui_exit();
   }
   // Message of ':enter' calls the maze game 
-  else if (strcmp(message, ":enter") == 0){
+  else if (strcmp(message, ":enter") == 0) {
     if (!maze_running_check()) {
       ui_maze(1);
     }
+    // If they try to type ':enter' twice, tell them they already did that
     else {
       ui_display("Narrator", "You are already in the maze.");
     }
   }
-  else if (strcmp(message, ":view") == 0 || strcmp(message, ":v") == 0) {
+  // Message of ':view' shows the paper for the door (in Player Two)
+  else if (strcmp(message, ":view") == 0) {
     ui_paper();
+    // Assume that players won't try to ':view' twice
   }
-
-    // Message ':open' calls the box 
-  else if (strcmp(message, ":open") == 0 || strcmp(message, ":o") == 0) {
+  // Message of ':open' shows the anagram box 
+  else if (strcmp(message, ":open") == 0) {
     if (!box_running_check()) {
       ui_box(1);
     }
+    // If they try to type ':open' twice, tell them they already did that
     else {
       ui_display("Narrator", "You have already opened this box");
     }
   }
-  
-
-  else if (strcmp(message, ":fight") == 0 || strcmp(message, ":f") == 0) {
+  // Message of ':fight' starts the final boss fight
+  else if (strcmp(message, ":fight") == 0) {
+    // The player starts at coordinate (10, 18)
     ui_boss(10, 18);
   }
-  // Otherwise, display the message in the chat
+  // Otherwise, the message is not a game command, so display the message in the chat
   else { 
     ui_display("Player One", message); 
   }
+
   // Send the message to Player Two if they are connected
+  // We send all messages, including game commands
   if (fd != -1) {
     message_info_t info = {"Player One", (char*)message};
     if (send_message(fd, info) == -1) {
@@ -235,100 +281,107 @@ void input_callback(const char* message) {
       exit(EXIT_FAILURE);
     }
   }
+
   // We have now sent a message, so set this bool to true
   sent_message = true;
 } // input_callback
 
 /**
  * Thread function for receiving messages from Player Two.
- * 
- * No arguments are passed in.
  */
-void* player_two_receive(void* arg) {
+void* player_two_receive() {
   // Continuously receive messages
-  while (1) {
-      // Read a message from Player Two
-      message_info_t info = receive_message(fd);
-      // Error checks
-      if (info.username == NULL) {
-        perror("receive_message from Player Two has failed");
-        exit(EXIT_FAILURE);
-      }
-      if (info.message == NULL) {
-        perror("receive_message from Player Two has failed");
-        exit(EXIT_FAILURE);
-      }
-      // Break out of the receive loop if Player Two quit
-      if ((strcmp(info.message, ":q") == 0) || (strcmp(info.message, ":quit") == 0)) {
-        ui_display("WARNING", "PLAYER 2 HAS QUIT");
-        break;
-      }
-      else if (strcmp(info.message, ":exit") == 0) {
-        break;
-      }
-      // Don't display the message if Player Two is trying to start the maze
-      if ((strcmp(info.message, ":pull") == 0)) {
-        continue;
-      }
-      else if (strcmp(info.message, ":door") == 0) {
-        continue;
-      }
+  while(1) {
+    // Read a message from Player Two
+    message_info_t info = receive_message(fd);
+    // Error checks
+    if (info.username == NULL) {
+      perror("receive_message from Player Two has failed");
+      exit(EXIT_FAILURE);
+    }
+    if (info.message == NULL) {
+      perror("receive_message from Player Two has failed");
+      exit(EXIT_FAILURE);
+    }
 
-      else if (strcmp(info.message, ":open") == 0){
-        continue;
-      }
-      else if (strcmp(info.message, ":fight") == 0){
-        continue;
-      }
-      // We received data from Player Two
-      else if (strcmp(info.username, "Data") == 0) {
-        if (strcmp(info.message, "opened") == 0) door_done = true;
-        else if (strcmp(info.message, "solved_two") == 0) box2_done = true;
-        else if (strcmp(info.message, "time") == 0) break;
-        continue;
-      }
+    // Break out of the receive loop if Player Two quit (stop receiving messages from them)
+    if ((strcmp(info.message, ":q") == 0) || (strcmp(info.message, ":quit") == 0)) {
+      ui_display("WARNING", "PLAYER 2 HAS QUIT");
+      break;
+    }
+    // ENDING: break out of loop if they won the game and are exiting
+    else if (strcmp(info.message, ":exit") == 0) {
+      break;
+    }
 
-      // We received data from Player One
-      else if (strcmp(info.username, "dam") == 0) {
-        int damage = atoi(info.message);
+    // Don't display the message if Player Two is trying to start any of the minigames
+    // (Not displaying game commands that are sent)
+    if ((strcmp(info.message, ":pull") == 0) || 
+        (strcmp(info.message, ":door") == 0) || 
+        (strcmp(info.message, ":open") == 0) || 
+        (strcmp(info.message, ":fight") == 0)) {
+      continue;
+    }
+
+    // If we received data from Player Two...
+    else if (strcmp(info.username, "data") == 0) {
+      // Data for door opening; set bool to true to continue narrative
+      if (strcmp(info.message, "opened") == 0) door_done = true;
+      // Data for anagram solved; set bool to true to continue narrative
+      else if (strcmp(info.message, "solved_two") == 0) box2_done = true;
+      // Data for time has run out, so we break out of receiving loop
+      else if (strcmp(info.message, "time") == 0) break;
+
+      // In all cases besides 'time', we continue
+        continue;
+    }
+
+    // We received damage from Player Two
+    else if (strcmp(info.username, "dam") == 0) {
+      // Get and update damage to our global
+      int damage = atoi(info.message);
+      // Damage > 0 means actual damage was done
+      if (damage != 0) {
         do_damage(damage);
-        if (damage != 0) ui_display("Narrator", "Your friend attacked the octopus!");
-        continue;
+        ui_display("Narrator", "Your friend attacked the octopus!");
       }
-      else if (strcmp(info.username, "posx") == 0) {
-        int x = atoi(info.message);
-        change_p2_posx(x);
-        continue;
-      }
-      else if (strcmp(info.username, "posy") == 0) {
-        int y = atoi(info.message);
-        change_p2_posy(y);
-        continue;
-      }
+      continue;
+    }
+    // We received position information from Player Two
+    else if (strcmp(info.username, "posx") == 0) {
+      // Get and change Player Two's x-position on our board
+      int x = atoi(info.message);
+      change_p2_posx(x);
+      continue;
+    }
+    else if (strcmp(info.username, "posy") == 0) {
+      // Get and change Player Two's y-position on our board
+      int y = atoi(info.message);
+      change_p2_posy(y);
+      continue;
+    }
 
-      // We have now received a message; set bool to to true
-      received_message = true;
+    // We have now received a message; set bool to to true
+    received_message = true;
       
-      /**
-       * if (username = username) uidisplay
-       * if username = damage) total_damage+=atoi(message) damage
-       * if username = maze_solved if message = "true" maze
-       */
-      // Print the message otherwise
-      ui_display(info.username, info.message);
-      // Free the message information
-      free(info.username);
-      free(info.message);
+    // ELSE CASE: print the message in the chat
+    ui_display(info.username, info.message);
+
+    // Free the message information
+    free(info.username);
+    free(info.message);
   }
-  // fd is invalid now
+  // If we break, then the fd is invalid now
+  close(fd);
   fd = -1;
+
   return NULL;
 } // player_two_receive
 
 /**
  * Thread function to seek connection from Player Two.
  * 
- * \param server_socket_fd  The server fd to allow for connection to Player Two 
+ * \param server_socket_fd  The server fd to allow for connection to Player Two.
  */
 void* connect_players(void* server_socket_fd) {
   // Get the server fd from the arguments
@@ -358,7 +411,7 @@ void* connect_players(void* server_socket_fd) {
   return NULL;
 } // connect_players
 
-// Set up connection and communication to Player Two. 
+// Set up connection and communication to Player Two
 // Set up UI
 int main() {
   // Open a server socket
@@ -394,8 +447,6 @@ int main() {
   // Run the UI loop. This function only returns once we call ui_stop() somewhere in the program.
   ui_run();
   
-  // TODO: CHECK THIS
-  // TODO: CLOSE ALL SOCKETS, FREE ALL THINGS
   close(server_socket_fd);
 
   return 0;

@@ -34,7 +34,7 @@ void* timer(void* args) {
   while(ui_time() != -1) {   
     sleep(1);
   }
-  message_info_t info = {"Data", "time"};
+  message_info_t info = {"data", "time"};
   send_message(fd, info);
   ui_exit();
   printf("\nYou're too late! Your time has run out. The ceiling has collapsed on you and your friend. The end.\n\n");
@@ -85,14 +85,15 @@ void* narrate(void* args) {
   narrate_display("You wake up.");
   narrate_display("Taking a look around, you see you are trapped in a stone chamber with a large padlocked door to the side.");
   narrate_display("You hear the faint trickle of water, and a strange light seems to glow from the cracks in the wall.");
-  narrate_display("Even as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond.");
+  narrate_display("But as you look, these cracks grow wider: the room is vibrating, and every so often, the sound of earth collapsing and rocks crashing into themselves echoes from beyond.");
   narrate_display("You need to escape before it is too late!");
   narrate_display("Your phone starts to buzz in your pocket, but when you check it out, it has no signal.");
   narrate_display("Instead, it seems a strange app has taken over your whole screen! It looks like... a text editor?");
   narrate_display("You try typing something in. What's this?");
-  narrate_display("It seems someone else is on the other end of this line- maybe they are stuck too.");
+  narrate_display("It seems someone else is on the other end of this line; they might be stuck too.");
   narrate_display("Perhaps you can use this strange app to communicate, and maybe even help each other escape!");
   narrate_display("Try sending a message to each other now!");
+  narrate_display("[Type in a message using your keyboard and press the 'Enter' button to send it.]");
 
   // Wait for players to try the chat
   while(1){
@@ -132,7 +133,7 @@ void* narrate(void* args) {
   }
   // TODO: add stuff about a door w/ a number lock on it here too. they can look at either.
 
-  message_info_t info = {"Data", "opened"};
+  message_info_t info = {"data", "opened"};
   send_message(fd, info);
 
   narrate_display( "The door opens into a giant cavern!");
@@ -146,15 +147,15 @@ void* narrate(void* args) {
     if(box_running_check()) break;
   }
 
-  narrate_display( "These words do not make much sense, but it seems like the letters can be moved around.");
-  narrate_display( "Enter '[correct sequence]' to rearrange these words into a name (without spaces).");
+  narrate_display( "The box has some words engraved in it, but they do not make much sense. It seems like the letters can be moved around.");
+  narrate_display( "Enter '[correct letter sequence]' to rearrange these letters into a name (without spaces).");
 
   // Wait for box to finish
   while(1) {
    if(!box_running_check()) break;
   }
 
-  message_info_t box_info = {"Data", "solved_two"};
+  message_info_t box_info = {"data", "solved_two"};
   send_message(fd, box_info);
 
   if (box1_done == false){
@@ -175,21 +176,26 @@ void* narrate(void* args) {
       break;
     }
   }
+
+  // Explain the boss fight
+  narrate_display("[Use your arrow keys to move around and avoid the laser attacks]");
+
   pthread_t boss_attack_thread;
   if (pthread_create(&boss_attack_thread, NULL, boss_attack_func, NULL) != 0) {
     perror("pthread_create failed");
     exit(EXIT_FAILURE);
   }
-  narrate_display( "[Use arrow keys to move and avoid attacks]");
-  narrate_display( "[Touch the monster to do damage]");
+  
+  narrate_display("[Run up and touch the monster to do damage. The human touch is poisonous to him!]");
 
   // Wait for door to finish
   while(1) {
    if(!boss_running_check()) break;
   }
 
-  narrate_display( "The octopus dissolves into the floor!");
-  narrate_display( "The open sky lies beyond. [Enter ':exit' to escape to freedom!]");
+  // -- ENDING -- //
+  narrate_display("Success! You defeated the monster! The octopus dissolves into the floor, its screams of agony dissolving in the air.");
+  narrate_display("The cavern rumbles and opens. The open sky lies beyond. [Type ':exit' to escape to freedom!]");
 
   return NULL;
 } // narrate
@@ -295,7 +301,7 @@ void* player_one_receive(void* args) {
         continue;
       }
       // We received data from Player One
-      else if (strcmp(info.username, "Data") == 0) {
+      else if (strcmp(info.username, "data") == 0) {
         if (strcmp(info.message, "escaped") == 0) maze_done = true;
         else if (strcmp(info.message, "solved_one") == 0) box1_done = true;
         else if (strcmp(info.message, "time") == 0)  break;
