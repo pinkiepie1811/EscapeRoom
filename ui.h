@@ -23,26 +23,8 @@ typedef void (*input_callback_t)(const char*);
 void ui_init(input_callback_t callback);
 
 /**
- * Returns the boolean for the maze_running
- * 
- * \return true or false depending on if the maze is currently running
- */
-bool maze_running_check();
-
-/**
- * Returns the boolean for the door_running
- * 
- * \return true or false depending on if the door is currently running
- */
-bool door_running_check();
-
-/**
- * 
-*/
-bool box_running_check();
-
-/**
  * Run the main UI loop. This function will only return the UI is exiting.
+ * Gets user input.
  */
 void ui_run();
 
@@ -53,11 +35,17 @@ void ui_run();
  *                  code will copy the string out of message, so it is safe to
  *                  reuse the memory pointed to by message after this function.
  *
- * \param message   The string that should be added to the display pane. As with
+ * \param message   The string that should be added to the display or narrative pane. As with
  *                  the username, the UI code will copy the string passed in.
  */
 void ui_display(const char* username, const char* message);
 
+/**
+ * Used specifically for the narration thread in the player files.
+ * Calls ui_display but inserts a sleep call for 3 seconds (so players can read).
+ * 
+ * \param message  The string that will be displayed in the narrative pane
+ */
 void narrate_display(const char* message);
 
 /**
@@ -67,7 +55,9 @@ void ui_run();
 
 /**
  * Keeps track of the timer telling the players how much longer they
- * have to escape. 
+ * have to escape.
+ * 
+ * \return 0 if the players still have time; -1 if time has run out. 
  */
 int ui_time();
 
@@ -104,44 +94,66 @@ bool door_running_check();
  */
 void ui_paper();
 
-void ui_box(int player_id);
+/**
+ * Runs the anagram/box game in the UI.
+ */
+void ui_box();
 
 /**
- * @brief TODO
+ * Returns the boolean for the box_running.
  * 
- * @param p2_x 
- * @param p2_y 
+ * \return true or false depending on if the box is currently running.
+*/
+bool box_running_check();
+
+/**
+ * Update the x-position of the other player for the final boss game board.
+ * 
+ * \param p2_x Current x position of the other player.
  */
 void change_p2_posx(int p2_x);
+ 
+/**
+ * Update the y-position of the other player for the final boss game board.
+ * 
+ * \param p2_y Current y position of the other player.
+ */
 void change_p2_posy(int p2_y);
 
-int get_pos_x();
-int get_pos_y();
 /**
- * @brief TODO
+ * Return the current x-position of the player using the UI.
+ */
+int get_pos_x();
+
+/**
+ * Return the current y-position of the player using the UI.
+ */
+int get_pos_y();
+
+/**
+ * Returns the amount of damage that we need to send to the other player
+ * (Protected by locks).
  * 
- * @return int 
+ * \return int  The damage to send to the other player so they can update their global.
  */
 int change_damage();
 
 /**
- * @brief TODO
+ * Updates the monster's health based on the damage done.
  * 
+ * \param dam  The amount of damage to be done to the monster. 
  */
 void do_damage(int dam);
 
 /**
- * @brief TODO
- * 
+ * Updates the location of the boss attacks so that they move down the screen.
  */
 void boss_attack();
 
 /** 
- * Runs the final boss simulator.
- * TODO: FINISH THIS
+ * Runs the final boss fight in the UI. 
  */
 void ui_boss();
-
 
 /**
  * Returns the boolean for the boss_running (protected by locks).

@@ -23,7 +23,7 @@ bool sent_message = false;
 // Boolean that tells us if Player Two has unlocked the door
 bool door_done = false;
 
-// Boolean that tells us if PLayer Two has solved their anagram
+// Boolean that tells us if Player Two has solved their anagram
 bool box2_done = false;
 
 void* timer();            // Thread function that runs the timer
@@ -93,16 +93,16 @@ void* narrate(void* args) {
 
   // Wait for anagram/box to start
   while(1) {
-    if(box_running_check()) break;
+    if (box_running_check()) break;
   }
   
-  // Explain the annagrams
+  // Explain the anagrams
   narrate_display( "The box has some words engraved in it, but they do not make much sense. It seems like the letters can be moved around.");
   narrate_display( "Enter '[correct letter sequence]' to rearrange these letters into a name (without spaces).");
 
   // Wait for anagram/box to finish
   while(1) {
-    if(!box_running_check()) break;
+    if (!box_running_check()) break;
   }
   
   // Once Player One has solved their anagram, send that it is solved to Player Two
@@ -192,13 +192,13 @@ void* boss_attack_func() {
     info.message = mess;
     send_message(fd, info);
 
-    // Send Player One x-position
+    // Send our x-position
     info.username = "posx";
     sprintf(mess, "%d", get_pos_x());
     info.message = mess;
     send_message(fd, info);
 
-    // Send Player One y-position
+    // Send our y-position
     info.username = "posy";
     sprintf(mess, "%d", get_pos_y());
     info.message = mess;
@@ -233,7 +233,7 @@ void* boss_attack_func() {
  *                 for the game.
  */
 void input_callback(const char* message) {
-  // Quitting mechanism
+  // Quitting/exiting mechanism
   if (strcmp(message, ":quit") == 0 || strcmp(message, ":q") == 0 || strcmp(message, ":exit") == 0) {
     ui_exit();
   }
@@ -259,13 +259,19 @@ void input_callback(const char* message) {
     }
     // If they try to type ':open' twice, tell them they already did that
     else {
-      ui_display("Narrator", "You have already opened this box");
+      ui_display("Narrator", "You have already opened this box.");
     }
   }
   // Message of ':fight' starts the final boss fight
   else if (strcmp(message, ":fight") == 0) {
-    // The player starts at coordinate (10, 18)
-    ui_boss(10, 18);
+    if (!boss_running_check()) {
+      // The player starts at coordinate (10, 18)
+      ui_boss(10, 18);
+    }
+    // If they try to type ':fight' twice, tell them they already did that
+    else {
+      ui_display("Narrator", "You are already fighting the octopus.");
+    }
   }
   // Otherwise, the message is not a game command, so display the message in the chat
   else { 
@@ -333,7 +339,7 @@ void* player_two_receive() {
       else if (strcmp(info.message, "time") == 0) break;
 
       // In all cases besides 'time', we continue
-        continue;
+      continue;
     }
 
     // We received damage from Player Two

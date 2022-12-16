@@ -16,16 +16,18 @@
 // The timeout for input
 #define INPUT_TIMEOUT_MS 10
 
-// Maze starting positions:
-#define START_X 3;
-#define START_Y 0;
+// Maze starting positions (for Player One)
+#define START_X_MAZE 3
+#define START_Y_MAZE 0
 
 // Time for players to escape in seconds
 #define TIME_LIMIT 900
 
+// Boss fight starting positions
 #define START_X_BOSS 10
 #define START_Y_BOSS 18
 
+// Number of laser attacks the final boss starts with
 #define NUM_ATTACKS 10
 
 // The ncurses forms code is loosely based on the first example at
@@ -73,7 +75,7 @@ bool maze_running = false;
 bool door_running = false;
 // When true, the boss game should run
 bool boss_running = false;
-// When true, box game should run;
+// When true, box game should run
 bool box_running = false;
 
 // The handle for the UI thread
@@ -86,27 +88,26 @@ pthread_mutex_t ui_lock;
 // Locks to protect our booleans from race conditions
 pthread_mutex_t maze_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t door_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t box_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t boss_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t boss_health_lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t boss_attack_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t box_lock = PTHREAD_MUTEX_INITIALIZER;
 
+// -- GLOBALS -- //
 // The player that is using the UI (Player One or Player Two)
 // Initialized when the maze game is running
 int stored_player = -1;
 
 // Position of the player in the games where position is needed (maze & boss)
-int player_x = START_X;
-int player_y = START_Y;
+// We start with the maze start positions
+int player_x = START_X_MAZE;
+int player_y = START_Y_MAZE;
 
 // -- MAZE GAME -- //
 // 2D array holding the maze read in from maze.txt
 char** maze;
-// Global variables to keep track of where the player in the maze is
-int maze_x = START_X;
-int maze_y = START_Y;
 
-// -- MATH GAME -- //
+// -- DOOR GAME -- //
 // 2D array holding the paper with math equations from paper.txt
 char** paper;
 // 2D array holding the door with the lock on it from door.txt
@@ -117,23 +118,24 @@ char nums[4] = {'0', '0', '0', '0'};
 // The current number on the lock on the door that the user is trying to
 // increment or decrement
 int curr_num = 0;
-char** door;
 
-// -- ANAGRAM GAME --
-//2D array holding the box read from box1.txt
+// -- ANAGRAM GAME -- // 
+// 2D array holding the box read from box1.txt
 char** box1;
-//2D array holding the box read from box2.txt
+// 2D array holding the box read from box2.txt
 char** box2;
-//Global pointer to a string to keep track of the the user answer input
+//Global pointer to a string to keeps track of the player answer input
 char* box_answer;
 
 // -- BOSS --//
 // 2D array holding the battlefield + the final boss from boss.txt
 char** boss;
-
-// Boss fight
+// Global health for the monster
 int monster_health = 10;
+// Keeps track of the damage this player has done so we can send it to the other player
 int health_change = 0;
+// An array with the positions of the laser attacks
+// Initialized to certain positions
 int attacks[NUM_ATTACKS][2] = { {3, 7},
                                 {8, 9},
                                 {15, 12},
@@ -143,15 +145,14 @@ int attacks[NUM_ATTACKS][2] = { {3, 7},
                                 {12, 12},
                                 {1, 4},
                                 {10,8},
-                                {10,12}
-                                };
+                                {10,12}};
 
-// Position of other player
+// Position of the other player for the final boss
 int stored_p2_x = START_X_BOSS;
 int stored_p2_y = START_Y_BOSS;
 
 // -- TIMER -- //
-// Saves the game start time
+// Saves the game start time; initialize to -1 so we know when we need to call clock()
 clock_t start_time = -1;
 
 // -- ERROR PROTECTION FOR LOCKS -- //
@@ -201,10 +202,10 @@ bool door_running_check() {
 } // door_running_check
 
 /**
- * Returns the boolean for the box_running (protected by locks).
+ * Returns the boolean for the box_running.
  * 
- * \return true or false depending on if anagram/box game is currently running.
- */
+ * \return true or false depending on if the box is currently running.
+*/
 bool box_running_check(){
   bool box;
   // Make a copy of the boolean
@@ -288,11 +289,10 @@ void ui_init(input_callback_t callback) {
   // Don't advance to the next field automatically when using the input field
   field_opts_off(input_fields[0], O_AUTOSKIP);
 
-  // Turn off word wrap (nice, but causes other problems)
+  // Turn off word wrap for some fields
   field_opts_off(input_fields[0], O_WRAP);
   field_opts_off(display_fields[0], O_WRAP);
   field_opts_off(game_fields[0], O_WRAP);
-  // TODO: field_opts_off(narrative_fields[0], O_WRAP);
 
   // Create the forms
   game_form = new_form(game_fields);
@@ -330,7 +330,7 @@ void ui_init(input_callback_t callback) {
   pthread_mutexattr_settype(&ui_lock_attr, PTHREAD_MUTEX_RECURSIVE);
   pthread_mutex_init(&ui_lock, &ui_lock_attr);
 
-  // Read the maze
+  // Read all game boards
   maze = read_game("game-boards/maze.txt");
   door = read_game("game-boards/door.txt");
   paper = read_game("game-boards/paper.txt");
@@ -344,6 +344,7 @@ void ui_init(input_callback_t callback) {
 
 /**
  * Run the main UI loop. This function will only return the UI is exiting.
+ * Gets user input.
  */
 void ui_run() {
   // Loop as long as the UI is running
@@ -365,7 +366,7 @@ void ui_run() {
     } 
     // Case: If the input is arrow keys and the maze or final boss is running currently
     else if (((ch == KEY_DOWN) || (ch == KEY_UP) || (ch == KEY_RIGHT) || (ch == KEY_LEFT)) && ((maze_running_check() && stored_player == 1) || boss_running_check())) {
-      // Adjust the position of the player in the maze accordingly
+      // Adjust the position of Player One in the maze accordingly
       if (ch == KEY_RIGHT) {
         player_x++;
       } 
@@ -386,10 +387,10 @@ void ui_run() {
           form_driver(game_form, REQ_CLR_FIELD);
           ui_maze(1);
         }
-      // Otherwise, the player is out of bounds; keep them at the start
+        // Otherwise, the player is out of bounds; keep them at the start
         else {
-          player_x = START_X;
-          player_y = START_Y;
+          player_x = START_X_MAZE;
+          player_y = START_Y_MAZE;
         }
       }
       // -- FOR BOSS -- //
@@ -399,7 +400,7 @@ void ui_run() {
     } 
     // Case: If the input is arrow keys and the door is running currently
     else if (((ch == KEY_DOWN) || (ch == KEY_UP) || (ch == KEY_RIGHT) || (ch == KEY_LEFT)) && door_running_check()) {
-      // Adjust the which number the player is changing if keys are right or left arrow
+      // Adjust the which number Player Two is changing if keys are right or left arrow
       if (ch == KEY_RIGHT) {
         curr_num++;
         // Wrap around
@@ -460,13 +461,17 @@ void ui_run() {
         memcpy(message, buffer, buffer_len);
         message[buffer_len] = '\0';
         
-        if (message[0] == '[' && message[buffer_len -1] == ']'){
-          box_answer = (char*)malloc(buffer_len+1);
-          strncpy(box_answer, message, buffer_len+1);
+        // If the message starts with '[' and ends in ']' then it is input for the anagram game
+        if (message[0] == '[' && message[buffer_len - 1] == ']') {
+          // Store the player's answer
+          box_answer = (char*)malloc(buffer_len + 1);
+          strncpy(box_answer, message, buffer_len + 1);
+          // Call ui_box to check is answer is correct
           ui_box(stored_player);
         }
+        // Otherwise, treat as normal message
         else {
-           // Run the callback function provided to ui_init
+          // Run the callback function provided to ui_init
           input_callback(message);
         }
 
@@ -490,10 +495,8 @@ void ui_run() {
  * \param username  The username that should appear before the message. The UI
  *                  code will copy the string out of message, so it is safe to
  *                  reuse the memory pointed to by message after this function.
- *                  If the username is "Narrator", the username will not appear
- *                  before the message. 
  *
- * \param message   The string that should be added to the display pane. As with
+ * \param message   The string that should be added to the display or narrative pane. As with
  *                  the username, the UI code will copy the string passed in.
  */
 void ui_display(const char* username, const char* message) {
@@ -549,14 +552,24 @@ void ui_display(const char* username, const char* message) {
   Pthread_mutex_unlock(&ui_lock);
 } // ui_display
 
+/**
+ * Used specifically for the narration thread in the player files.
+ * Calls ui_display but inserts a sleep call for 3 seconds (so players can read).
+ * 
+ * \param message  The string that will be displayed in the narrative pane
+ */
 void narrate_display(const char* message) {
-  ui_display("Narrator",message);
+  // ui_display it
+  ui_display("Narrator", message);
+  // Sleep for 3 seconds
   sleep(3);
-}
+} // narrate_display
 
 /**
  * Keeps track of the timer telling the players how much longer they
- * have to escape. 
+ * have to escape.
+ * 
+ * \return 0 if the players still have time; -1 if time has run out. 
  */
 int ui_time() {
   // Only start the timer is the UI is running
@@ -591,17 +604,19 @@ int ui_time() {
 
     // Unlock the UI
     Pthread_mutex_unlock(&ui_lock);
+
+    // If time is up, return -1
     if (time <= 0) {
       return -1;
     }
   }
-  return 1;
+  return 0;
 } // ui_time
 
 /**
- * Run the maze in the UI
+ * Run the maze in the UI.
  * 
- * \param player  An int indicating which player is calling the function
+ * \param player  An int indicating which player is calling the function (Player One or Player Two).
  */
 void ui_maze(int player) {
   // Store which player is calling the UI
@@ -615,7 +630,7 @@ void ui_maze(int player) {
   if (ui_running) {
     // Lock the UI
     Pthread_mutex_lock(&ui_lock);
-    // PLAYER TWO // 
+    // -- PLAYER TWO -- // 
     if (player == 2) {
       form_driver(game_form, REQ_CLR_FIELD);
       // Print the maze
@@ -628,14 +643,16 @@ void ui_maze(int player) {
         }
         form_driver(game_form, REQ_NEW_LINE);
       }
+      // Print message to tell Player Two what to do
       ui_display("Narrator", "There's a map on the wall! Maybe you can use it to help your friend?");
     }
-    // PLAYER ONE // 
+    // -- PLAYER ONE -- // 
     else if (player == 1) {
       // If the player hit a wall, set them back to the beginning
       if (maze[player_y][player_x] == '*') {
         player_x = 3;
         player_y = 0;
+        // Let Player One know why they have been reset to the start
         ui_display("Narrator", "You hit a wall! Your consciousness fades, and you wake up... back at the start.");
       }
       // If the player is at the end, the maze is not running
@@ -673,39 +690,43 @@ void ui_maze(int player) {
   Pthread_mutex_unlock(&ui_lock);
 } // ui_maze
 
-/**
- *Run the door/math game in UI
-*/
+/** 
+ * Runs the math game (lock on the door) in the UI.
+ * Called by Player Two.
+ */
 void ui_door() {
-  stored_player = 2;
-  
- // Set door_running to true
+  // Set door_running to true
   Pthread_mutex_lock(&door_lock);
   door_running = true;
   Pthread_mutex_unlock(&door_lock);
-  // CHANGE
+
+  // Local variable with the solution to compare player answers to
   char solution[4] = {'0', '5', '4','2'};
 
+  // Assume that the solution is correct
   int solved = true;
-    for (int i = 0; i < 4; i++) {
-      if (solution[i] != nums[i]) solved = false;
-    }
+  // Check the player's answers
+  for (int i = 0; i < 4; i++) {
+    // If one answer is wrong, set bool to false
+    if (solution[i] != nums[i]) solved = false;
+  }
+  // If bool is still true, they unlocked the door; door won't run anymore
   if (solved) {
     Pthread_mutex_lock(&door_lock);
     door_running = false;
     Pthread_mutex_unlock(&door_lock);
   }
 
-if (ui_running) {
-    // Print the door
+  if (ui_running) {
     Pthread_mutex_lock(&ui_lock);
+    // Print the door
     form_driver(game_form, REQ_CLR_FIELD);
-    
     for (int y = 0; y < SIZE; y++) {
       for (int x = 0; x < SIZE; x++){
         if (door[y][x] <= '3' && door[y][x] >= '0') {
-
-          char ch = nums[(int) (door[y][x] - '0')];
+          // If we are at the position of the numbers for the lock
+          // Get the player's current numbers from the array and print those
+          char ch = nums[(int)(door[y][x] - '0')];
           form_driver(game_form, ch);
         }
         else {
@@ -714,133 +735,166 @@ if (ui_running) {
       }
       form_driver(game_form, REQ_NEW_LINE);
     }
-
     Pthread_mutex_unlock(&ui_lock);
   }
 } // ui_door
 
 /**
- * Display paper/math game in UI
+ * Runs the math game (paper with math equations) in the UI.
+ * Called by Player One.
  */
 void ui_paper() {
   if (ui_running) {
     Pthread_mutex_lock(&ui_lock);
+    // Print the paper from the proper array
     form_driver(game_form, REQ_CLR_FIELD);
     for (int y = 0; y < SIZE; y++) {
-        for (int x = 0; x < SIZE; x++){
-          form_driver(game_form, paper[y][x]);
-        }
-        form_driver(game_form, REQ_NEW_LINE);
+      for (int x = 0; x < SIZE; x++) {
+        form_driver(game_form, paper[y][x]);
+      }
+      form_driver(game_form, REQ_NEW_LINE);
     }
     Pthread_mutex_unlock(&ui_lock);
   }
 } // ui_paper
 
 /**
- * Run box/anagram game in UI
- * \param player_id the user calling this function
-*/
-void ui_box(int player_id){
-  stored_player = player_id; //store playerID in global
-
+ * Runs the anagram/box game in the UI.
+ */
+void ui_box() {
+  // Change status of box_running boolean
   Pthread_mutex_lock(&box_lock);
-  box_running = true; //change status of box_running boolean
+  box_running = true; 
   Pthread_mutex_unlock(&box_lock);
 
+  // Local variables for the solutions
   char* solution_1 = "[pmosera]";
   char* solution_2 = "[charliecurtsinger]";
   
-  bool solve = false;
-  if(box_answer != NULL){
-  if (player_id == 1 && strcmp(box_answer, solution_1) == 0){
-      solve = true;
-    }
-  else if (player_id == 2 && (strcmp(box_answer, solution_2) == 0))
-      solve = true;
-  }//when there is user input, check with the solutions
+  bool solved = false;
+  // Compare the input to the solution
+  if (box_answer != NULL) {
+  // Player One
+  if ((stored_player == 1) && (strcmp(box_answer, solution_1) == 0)) {
+      solved = true;
+  }
+  // Player Two
+  else if ((stored_player == 2) && (strcmp(box_answer, solution_2) == 0))
+    solved = true;
+  }
 
-  if (solve){
-      Pthread_mutex_lock(&box_lock);
-      box_running = false;
-      Pthread_mutex_unlock(&box_lock);
-  } //when anagram solved, change status of box_running boolean
+  // If the player solved it, the box is no longer running
+  if (solved) {
+    Pthread_mutex_lock(&box_lock);
+    box_running = false;
+    Pthread_mutex_unlock(&box_lock);
+  } 
 
-  if(ui_running){
+  if (ui_running) {
     Pthread_mutex_lock(&ui_lock);
+    // Print the box
     form_driver(game_form, REQ_CLR_FIELD);
     for (int y = 0; y < SIZE; y++) {
-        for (int x = 0; x < SIZE; x++){
-          if (player_id == 1)
-            form_driver(game_form, box1[y][x]);
-          else 
-            form_driver(game_form, box2[y][x]);
+      for (int x = 0; x < SIZE; x++) {
+        // Check which box to print according to the player
+        if (stored_player == 1) {
+          form_driver(game_form, box1[y][x]);
         }
-        form_driver(game_form, REQ_NEW_LINE);
+        else {
+          form_driver(game_form, box2[y][x]);
+        }
+      }
+      form_driver(game_form, REQ_NEW_LINE);
     }
     Pthread_mutex_unlock(&ui_lock);
-  }// display box
+  }
 } // ui_box
 
 /**
- * @brief update the position of the other player
+ * Update the x-position of the other player for the final boss game board.
  * 
- * @param p2_x current x position of the other player
- * @param p2_y current y position of the other player
+ * \param p2_x Current x position of the other player.
  */
 void change_p2_posx(int p2_x) {
-  stored_p2_x=p2_x;
-}
+  stored_p2_x = p2_x;
+} // change_p2_posx
+
+/**
+ * Update the y-position of the other player for the final boss game board.
+ * 
+ * \param p2_y Current y position of the other player.
+ */
 void change_p2_posy(int p2_y) {
   stored_p2_y=p2_y;
-}
+} // change_p2_posy
 
 /**
- * Return the current position of the player using the UI
-*/
+ * Return the current x-position of the player using the UI.
+ */
 int get_pos_x() {
   return player_x;
-}
-int get_pos_y() {
-  return player_y;
-}
+} // get_pos_x
 
 /**
- * @brief TODO
+ * Return the current y-position of the player using the UI.
+ */
+int get_pos_y() {
+  return player_y;
+} // get_pos_y
+
+/**
+ * Returns the amount of damage that we need to send to the other player
+ * (Protected by locks).
  * 
- * @return int 
+ * \return int  The damage to send to the other player so they can update their global.
  */
 int change_damage() {
+  // Make a copy of the damage to return
   Pthread_mutex_lock(&boss_health_lock);
   int damage = health_change;
   health_change = 0;
   Pthread_mutex_unlock(&boss_health_lock);
   return damage;
-}
-
-void do_damage(int dam) {
-  Pthread_mutex_lock(&boss_health_lock);
-  monster_health-=dam;
-  Pthread_mutex_unlock(&boss_health_lock);
-}
+} // change_damage
 
 /**
- * @brief TODO
+ * Updates the monster's health based on the damage done.
  * 
+ * \param dam  The amount of damage to be done to the monster. 
  */
-void boss_attack(){
-  srand(time(NULL));
-    for (int i = 0; i < NUM_ATTACKS; i++) {
-      Pthread_mutex_lock(&boss_attack_lock);
-      attacks[i][1]++;
-      if (attacks[i][1] > 18) {
-        attacks[i][0] = (rand() % 18) + 1;
-         attacks[i][1] = 7;
-      }
-      Pthread_mutex_unlock(&boss_attack_lock);
-    }
-}
+void do_damage(int dam) {
+  // Update monster health
+  Pthread_mutex_lock(&boss_health_lock);
+  monster_health -= dam;
+  Pthread_mutex_unlock(&boss_health_lock);
+} // do_damage
 
+/**
+ * Updates the location of the boss attacks so that they move down the screen.
+ */
+void boss_attack() {
+  srand(time(NULL));
+  for (int i = 0; i < NUM_ATTACKS; i++) {
+    Pthread_mutex_lock(&boss_attack_lock);
+    // "Age" the attack by making it move down in y-position
+    attacks[i][1]++;
+
+    // If the attacks reach the bottom of the game, reset them 
+    // back at the top and with a different x-position
+    if (attacks[i][1] > 18) {
+      attacks[i][0] = (rand() % 18) + 1;
+      attacks[i][1] = 7;
+    }
+    Pthread_mutex_unlock(&boss_attack_lock);
+  }
+} // boss_attack
+
+/** 
+ * Runs the final boss fight in the UI. 
+ */
 void ui_boss() {
+  // If this is the first time calling the boss game, start the player at the starting position
+  // Set boss_running bool to true
   if (!boss_running_check()) {
     player_x = START_X_BOSS;
     player_y = START_Y_BOSS;
@@ -851,11 +905,13 @@ void ui_boss() {
 
   if (ui_running) {
     Pthread_mutex_lock(&ui_lock);
-
+    // Clear the previous board
     form_driver(game_form, REQ_CLR_FIELD);
 
+    // For all the attack on the board
     for (int a = 0; a < NUM_ATTACKS; a++) {
       Pthread_mutex_lock(&boss_attack_lock);
+      // If the player hits the attack, then set them back to the start
       if ((attacks[a][0] == player_x) && (attacks[a][1] == player_y)) {
         player_x = START_X_BOSS;
         player_y = START_Y_BOSS;
@@ -863,48 +919,65 @@ void ui_boss() {
       Pthread_mutex_unlock(&boss_attack_lock);
     }
 
-    if ((boss[player_y][player_x] == '|') || (boss[player_y][player_x] == '*')) {
+    // If the player hits the wall, set them back to the start
+    if (boss[player_y][player_x] == '*') {
       player_x = START_X_BOSS;
       player_y = START_Y_BOSS;
     }
 
+    // If the player reaches the monster, do damage
     else if (player_y <= 6) {
       Pthread_mutex_lock(&boss_health_lock);
+      // Our monster health decreases
       monster_health--;
+      // Increase the amount of damage we need to send to the other player
       health_change++;
       Pthread_mutex_unlock(&boss_health_lock);
+      // Print affirming message
       ui_display("Narrator", "You attacked the monster! He throws you backwards!");
+      // Player goes back to bottom of screen
       player_y = START_Y_BOSS;
     }
+    // Print the board
     for (int y = 0; y < SIZE; y++) {
-      for (int x = 0; x < SIZE; x++){
+      for (int x = 0; x < SIZE; x++) {
+        // Print this player
         if (y == player_y && x == player_x) {
           form_driver(game_form, '1');
         }
+        // Print the other player
         else if (stored_p2_x == x && stored_p2_y == y) {
           form_driver(game_form, '2');
         }
+        // Otherwise, print the rest of the board
         else {
+          // Go through all of the attacks and see if the current position is where an attack is
           bool attack = false;
           Pthread_mutex_lock(&boss_attack_lock);
           for (int a = 0; a < NUM_ATTACKS; a++) {
-            
             if ((attacks[a][0] == x) && (attacks[a][1] == y)) {
-            form_driver(game_form, '|');
-            attack = true;
+              // If there is an attack in this position, we will print the attack instead
+              attack = true;
             }
-            
           }
           Pthread_mutex_unlock(&boss_attack_lock);
-          if (!attack) form_driver(game_form, boss[y][x]);
+          // If there was an attack in the spot, print the laser
+          if (attack) {
+            form_driver(game_form, '|');
+          }
+          // Else, print whatever was in the board
+          else {
+            form_driver(game_form, boss[y][x]);
+          }
         }
-        }
-      form_driver(game_form, REQ_NEW_LINE);
       }
-    
-    
+      // Print newline for next line in the board
+      form_driver(game_form, REQ_NEW_LINE);
+    }     
     Pthread_mutex_unlock(&ui_lock);
   }
+
+  // If the monster has no health, he is defeated, so end the game
   Pthread_mutex_lock(&boss_health_lock);
   if (monster_health <= 0) {
     Pthread_mutex_lock(&boss_lock);

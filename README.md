@@ -9,7 +9,7 @@ After compiling the program using the provided Makefile, the players can begin c
 Upon sucessful connections, players proceed by the instructions prompted in the game. Generally, input is done by typing with keyboard characters or by moving elements on screen with the arrow-keys. To quit the game, enter `:q` or `:quit`.
 
 ## Notes
-An important rule of this game is that players would strictly follow the instructions given by the narrator of the game, especially when giving commands (inputs starting with `:`). Breaking this rule can have unexpected outcomes, and players might never be able to escape the dangerous room!!!!
+An important rule of this game is that players would strictly follow the instructions given by the narrator of the game, especially when giving commands (inputs starting with `:` or '[' and ending with ']'). Breaking this rule can have unexpected outcomes, and players might never be able to escape the dangerous room!!!!
 
 
 ### SOLUTIONS/WALKTHROUGH (Do not read unless you intend to cheat!)
@@ -49,5 +49,5 @@ An important rule of this game is that players would strictly follow the instruc
         Player 1: '[charliecurtsinger]'
 7. Players have solved the anagram, move onto the final boss by typing ':fight'
 8. Players must fight the giant octopus by using the arrow keys to avoid the flying lazers. The player will always see themselves as the '1' on the screen, and the other player as '2'. The players must attack the octopus a total of 10 times by getting to the octopus. When they move in the same space as the octopis, the octopus will take damage and the player will be thrown to the back. 
-9.   Upon defeating the octopus, players will almost be done. Type ':exit' to complete the program.
+9. Upon defeating the octopus, players will almost be done. Type ':exit' to complete the program.
 10. (addendum): If, at any point, the timer reaches 0, the players will both be thrown out of the game as they die.
