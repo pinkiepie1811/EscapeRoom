@@ -63,7 +63,7 @@ void* narrate(void* args) {
   // -- MAZE -- //
   narrate_display("As you consider your situation, the cracks in the wall in front of you start to glow even brighter, before they abruptly split apart into a pathway.");
   narrate_display("You poke your head in, and there looks to be a set of tunnels ahead. However, the glow in the walls is limited to the room you are in; if you step, in you will be walking in the dark.");
-  narrate_display("Still, you have no other choice. [Type ':enter' to enter the darkness, and use your arrow keys to navigate.]");
+  narrate_display("Still, you have no other choice. [Type ':enter' to enter the darkness, and use your arrow keys to navigate to the end 'E'.]");
   
   // Wait for maze to start
   while(1) {
@@ -76,7 +76,10 @@ void* narrate(void* args) {
 
   // Player One got through the maze, so send that information to Player Two
   message_info_t maze_info = {"data", "escaped"};
-  send_message(fd, maze_info);
+  if (send_message(fd, maze_info) == -1) {
+    perror("send_message of maze information to Player Two has failed");
+    exit(EXIT_FAILURE);
+  }
 
   // -- DOOR -- //
   narrate_display("You made it through the maze! You step out of the darkness and into a large cavern.");
@@ -107,7 +110,10 @@ void* narrate(void* args) {
   
   // Once Player One has solved their anagram, send that it is solved to Player Two
   message_info_t box_info = {"data", "solved_one"};
-  send_message(fd, box_info);
+  if (send_message(fd, box_info) == -1) {
+    perror("send_message of box information to Player Two has failed");
+    exit(EXIT_FAILURE);
+  }
 
   // If Player Two has not solved their anagram yet, let Player One know
   if (!box2_done) {
@@ -167,7 +173,7 @@ void* timer() {
   // Once the players have run out of time, we must exit the game
   // Send data that we have run out of time to Player Two so they know we are exiting
   message_info_t info = {"data", "time"};
-  send_message(fd, info);
+  send_message(fd, info); // Don't error check here because we are only sending just in case Player Two hasn't exited yet
   // Exit
   ui_exit();
   // Print in terminal to let them know why they can't play the game anymore
@@ -190,19 +196,28 @@ void* boss_attack_func() {
     info.username = "dam";
     sprintf(mess, "%d", change_damage());
     info.message = mess;
-    send_message(fd, info);
+    if (send_message(fd, info) == -1) {
+      perror("send_message of damage to Player Two has failed");
+      exit(EXIT_FAILURE);
+    }
 
     // Send our x-position
     info.username = "posx";
     sprintf(mess, "%d", get_pos_x());
     info.message = mess;
-    send_message(fd, info);
+    if (send_message(fd, info) == -1) {
+      perror("send_message of x-position to Player Two has failed");
+      exit(EXIT_FAILURE);
+    }
 
     // Send our y-position
     info.username = "posy";
     sprintf(mess, "%d", get_pos_y());
     info.message = mess;
-    send_message(fd, info);
+    if (send_message(fd, info) == -1) {
+      perror("send_message of y-position to Player Two has failed");
+      exit(EXIT_FAILURE);
+    }
 
     // Call boss_attack to update laser attacks
     boss_attack();
@@ -221,7 +236,10 @@ void* boss_attack_func() {
   last.username = "dam";
   sprintf(mess, "%d", change_damage());
   last.message = mess;
-  send_message(fd, last);
+  if (send_message(fd, last) == -1) {
+    perror("send_message of last damage to Player Two has failed");
+    exit(EXIT_FAILURE);
+  }
 
   return NULL;
 } // boss_attack_func
@@ -283,7 +301,7 @@ void input_callback(const char* message) {
   if (fd != -1) {
     message_info_t info = {"Player One", (char*)message};
     if (send_message(fd, info) == -1) {
-      perror("send_message to Player One has failed");
+      perror("send_message to Player Two has failed");
       exit(EXIT_FAILURE);
     }
   }
@@ -356,13 +374,13 @@ void* player_two_receive() {
     // We received position information from Player Two
     else if (strcmp(info.username, "posx") == 0) {
       // Get and change Player Two's x-position on our board
-      int x = atoi(info.message);
+      int x = atoi(info.message); // We can error check this but if x is zero (indicating an error), it doesn't matter
       change_p2_posx(x);
       continue;
     }
     else if (strcmp(info.username, "posy") == 0) {
       // Get and change Player Two's y-position on our board
-      int y = atoi(info.message);
+      int y = atoi(info.message); // We can error check this but if y is zero (indicating an error), it doesn't matter
       change_p2_posy(y);
       continue;
     }
@@ -378,7 +396,10 @@ void* player_two_receive() {
     free(info.message);
   }
   // If we break, then the fd is invalid now
-  close(fd);
+  if (close(fd) < 0) {
+    perror("failed to close socket");
+    exit(EXIT_FAILURE);
+  }
   fd = -1;
 
   return NULL;
@@ -424,7 +445,7 @@ int main() {
   unsigned short port = 0;
   int server_socket_fd = server_socket_open(&port);
   if (server_socket_fd == -1) {
-    perror("Server socket was not opened");
+    perror("server socket was not opened");
     exit(EXIT_FAILURE);
   }
 
@@ -447,13 +468,19 @@ int main() {
 
   // Display the port number for Player Two to connect to
   char buffer[50];
-  sprintf(buffer, "Connect Player Two to port %u\n", port);
+  if (sprintf(buffer, "Connect Player Two to port %u\n", port) < 0) {
+    perror("sprintf failed");
+    exit(EXIT_FAILURE);
+  }
   ui_display("INFO", buffer);
 
   // Run the UI loop. This function only returns once we call ui_stop() somewhere in the program.
   ui_run();
   
-  close(server_socket_fd);
+  if (close(server_socket_fd) < 0) {
+    perror("failed to close socket");
+    exit(EXIT_FAILURE);
+  }
 
   return 0;
 } // main

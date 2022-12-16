@@ -32,7 +32,6 @@ void* boss_attack_func(); // Thread function that controls the boss attacks and 
  * This function creates and calls other thread functions to run concurrently. 
  */
 void* narrate(void* args) {
-  
   // -- INTRODUCTION -- //
   narrate_display("You wake up.");
   narrate_display("Taking a look around, you see you are trapped in a stone chamber with a large locked door to the side.");
@@ -88,8 +87,11 @@ void* narrate(void* args) {
   }
 
   // Player Two unlocked the door, so send that information to Player One
-  message_info_t info = {"data", "opened"};
-  send_message(fd, info);
+  message_info_t door_info = {"data", "opened"};
+  if (send_message(fd, door_info) == -1) {
+    perror("send_message of door information to Player One has failed");
+    exit(EXIT_FAILURE);
+  }
 
   // -- ANAGRAM -- //
   narrate_display("The door opens into a giant cavern!");
@@ -111,10 +113,13 @@ void* narrate(void* args) {
 
   // Once Player Two has solved their anagram, send that it is solved to Player One
   message_info_t box_info = {"data", "solved_two"};
-  send_message(fd, box_info);
+  if (send_message(fd, box_info) == -1) {
+    perror("send_message of box information to Player One has failed");
+    exit(EXIT_FAILURE);
+  }
 
   // If Player One has not solved their anagram yet, let Player Two know
-  if (box1_done == false) {
+  if (!box1_done) {
     narrate_display("Your friend seems to be struggling to solve their puzzle. Communicate and help them!");
   }
   // Wait until Player One has sovled their anagram
@@ -171,7 +176,7 @@ void* timer() {
   // Once the players have run out of time, we must exit the game
   // Send data that we have run out of time to Player One so they know we are exiting
   message_info_t info = {"data", "time"};
-  send_message(fd, info);
+  send_message(fd, info); // Don't error check here because we are only sending just in case Player One hasn't exited yet
   // Exit
   ui_exit();
   // Print in terminal to let them know why they can't play the game anymore
@@ -194,19 +199,28 @@ void* boss_attack_func() {
     info.username = "dam";
     sprintf(mess, "%d", change_damage());
     info.message = mess;
-    send_message(fd, info);
+    if (send_message(fd, info) == -1) {
+      perror("send_message of damage to Player One has failed");
+      exit(EXIT_FAILURE);
+    }
 
     // Send our x-position
     info.username = "posx";
     sprintf(mess, "%d", get_pos_x());
     info.message = mess;
-    send_message(fd, info);
+    if (send_message(fd, info) == -1) {
+      perror("send_message of x-position to Player One has failed");
+      exit(EXIT_FAILURE);
+    }
 
     // Send our y-position
     info.username = "posy";
     sprintf(mess, "%d", get_pos_y());
     info.message = mess;
-    send_message(fd, info);
+    if (send_message(fd, info) == -1) {
+      perror("send_message of y-position to Player One has failed");
+      exit(EXIT_FAILURE);
+    }
 
     // Call boss_attack to update laser attacks
     boss_attack();
@@ -225,7 +239,10 @@ void* boss_attack_func() {
   last.username = "dam";
   sprintf(mess, "%d", change_damage());
   last.message = mess;
-  send_message(fd, last);
+  if (send_message(fd, last) == -1) {
+      perror("send_message of last damage to Player One has failed");
+      exit(EXIT_FAILURE);
+    }
 
   return NULL;
 } // boss_attack_func
@@ -359,13 +376,13 @@ void* player_one_receive(void* args) {
     // We received position information from Player One
     else if (strcmp(info.username, "posx") == 0) {
       // Get and change Player One's x-position on our board
-      int x = atoi(info.message);
+      int x = atoi(info.message); // We can error check this but if x is zero (indicating an error), it doesn't matter
       change_p2_posx(x);
       continue;
     }
     else if (strcmp(info.username, "posy") == 0) {
       // Get and change Player One's y-position on our board
-      int y = atoi(info.message);
+      int y = atoi(info.message); // We can error check this but if y is zero (indicating an error), it doesn't matter
       change_p2_posy(y);
       continue;
     }
@@ -382,7 +399,10 @@ void* player_one_receive(void* args) {
   }
 
   // If we break, then the fd is invalid now
-  close(fd);
+  if (close(fd) < 0) {
+    perror("failed to close socket");
+    exit(EXIT_FAILURE);
+  }
   fd = -1;
 
   return NULL;
