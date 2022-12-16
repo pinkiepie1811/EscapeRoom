@@ -18,35 +18,35 @@ An important rule of this game is that players would strictly follow the instruc
 2. Expect about 30 seconds of narration. Then, users are prompted to send a message to each other
 3. When both players have sent any message terminating with the enter key, the messages will be exchanged and a timer will appear.
 4. Narration will continue.From this point, gameplay for Player 1 and Player 2 diverges.
-    Player 1:
-    - Type `:enter` as prompted
-    - Player 1 will appear in a box. Their position is labeled by the '@' symbol, and the outer bounds are shown with `*`, and invisible walls lurk. They must navigate through the maze with arrow keys and instructions from Player 2 to get to the exit (`E`). A solution is:
-        Down 3
-        Left 2
-        Down 4
-        Right 5
-        Down 2
-        Right 4
-        Up 3
-        Right 6
-        Down 7
-        Left 4
-        Down 6
-    Player 2:
-    - Type `pull` as prompted.
-    - A map of the maze player 1 is in will appear. Assist player 1 in getting through the maze through text 
+    - Player 1:
+        - Type `:enter` as prompted
+        - Player 1 will appear in a box. Their position is labeled by the '@' symbol, and the outer bounds are shown with `*`, and invisible walls lurk. They must navigate through the maze with arrow keys and instructions from Player 2 to get to the exit (`E`). A solution is:
+            1. Down 3
+            2. Left 2
+            3. Down 4
+            4. Right 5
+            5. Down 2
+            6. Right 4
+            7. Up 3
+            8. Right 6
+            9. Down 7
+            10. Left 4
+            11. Down 6
+    - Player 2:
+        - Type `:pull` as prompted.
+        - A map of the maze player 1 is in will appear. Assist player 1 in getting through the maze through text 
 5. Having escaped the maze, players will then go to the next puzzle
-    Player 1:
-    - Type `:view` as prompted.
-    - Player 1 must solve the mathgames to give a code to player 2.
-    Player 2:
-    - Type `:door` as prompted.
-    - Use the left and right arrowkeys to change the focused digit on the keypad, then use up and down arrow keys to adjust the value of that digit. Switch the numbers on the keypad to the password. The solution is 0542.
+    - Player 1:
+        - Type `:view` as prompted.
+        - Player 1 must solve the mathgames to give a code to player 2.
+    - Player 2:
+        - Type `:door` as prompted.
+        - Use the left and right arrowkeys to change the focused digit on the keypad, then use up and down arrow keys to adjust the value of that digit. Switch the numbers on the keypad to the password. The solution is 0542.
 6. Players have solved the math puzzle, they must then continue.
     - Type `:open` as prompted.
     - Type the solved anagram into the terminal:
-        Player 1: '[pmosera]'
-        Player 1: '[charliecurtsinger]'
+        - Player 1: '[pmosera]'
+        - Player 1: '[charliecurtsinger]'
 7. Players have solved the anagram, move onto the final boss by typing ':fight'
 8. Players must fight the giant octopus by using the arrow keys to avoid the flying lazers. The player will always see themselves as the '1' on the screen, and the other player as '2'. The players must attack the octopus a total of 10 times by getting to the octopus. When they move in the same space as the octopis, the octopus will take damage and the player will be thrown to the back. 
 9. Upon defeating the octopus, players will almost be done. Type ':exit' to complete the program.
